@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Hall Pass System</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🍎 Hall Pass</h1>
+    <nav class="tabs">
+      <button class="tab is-active" data-tab="teacher">Teacher</button>
+      <button class="tab" data-tab="student">Student</button>
+    </nav>
+  </header>
+
+  <main class="view is-active" id="view">
+    <!-- TEACHER VIEW -->
+    <section id="teacher-view" class="view-panel is-active">
+      <div class="teacher-header">
+        <button class="primary-btn" id="issue-btn">+ New Pass</button>
+        <span class="spacer"></span>
+        <span class="live-badge" id="live-badge" title="Live updates">● Receiving updates</span>
+      </div>
+
+      <div class="panel-title">Students Out (active)</div>
+      <ul id="active-list" class="student-list"></ul>
+
+      <div class="panel-title">History</div>
+      <div class="tablet-scroll">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Destination</th>
+              <th>Issued</th>
+              <th>Returned</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- STUDENT VIEW -->
+    <section id="student-view" class="view-panel" hidden>
+      <div class="panel-title">Check in with your pass</div>
+      <div class="input-row">
+        <input
+          id="pass-code"
+          class="text-input"
+          placeholder="Enter 6-letter pass code"
+          autocomplete="off"
+        />
+        <button class="primary-btn" id="checkin-btn">Check in</button>
+      </div>
+      <div id="student-result"></div>
+    </section>
+  </main>
+
+  <!-- ISSUE PASS MODAL -->
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>Issue a Hall Pass</h2>
+        <button class="icon-btn" id="close-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="issue-form">
+        <div class="form-grid">
+          <div class="field">
+            <label for="stu-select">Student</label>
+            <select id="stu-select">
+              <option value="">Choose a student…</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="destination">Destination</label>
+            <input id="destination" placeholder="e.g. Nurse, Library, Full restroom" />
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="dest-note">Destination note <span class="muted">(optional)</span></label>
+            <input id="dest-note" placeholder="e.g. nurse's office, 2nd floor" />
+          </div>
+          <div class="field">
+            <label for="issued-by">Issued by <span class="muted">(optional)</span></label>
+            <input id="issued-by" placeholder="Your name" />
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="expires">Expires at <span class="muted">(optional)</span></label>
+            <input id="expires" type="datetime-local" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="cancel-modal">Cancel</button>
+          <button type="submit" class="primary-btn">Issue Pass</button>
+        </div>
+        <div id="issue-result" class="modal-message"></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
