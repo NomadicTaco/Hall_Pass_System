@@ -1,110 +1,844 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Hall Pass System</title>
-  <link rel="stylesheet" href="/styles.css" />
-</head>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Hall Pass</title>
+<style>
+:root{--bg:#f3f5fa;--card:#fff;--ink:#1b2333;--mut:#667089;--line:#dde2ee;--pri:#2f5bea;--pi:#fff;--ok:#1f9d63;--warn:#d98a00;--bad:#d63b3b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f131d;--card:#1a2030;--ink:#eef1f8;--mut:#9aa4bd;--line:#2b3348;--pri:#6b8cff;--pi:#0f131d;--ok:#3cc487;--warn:#f0a928;--bad:#ff6b6b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f131d;--card:#1a2030;--ink:#eef1f8;--mut:#9aa4bd;--line:#2b3348;--pri:#6b8cff;--pi:#0f131d;--ok:#3cc487;--warn:#f0a928;--bad:#ff6b6b;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:18px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+header{display:flex;align-items:center;gap:16px;padding:14px 20px;flex-wrap:wrap}
+h1{font-size:26px;margin:0;flex:1;min-width:160px}
+nav{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);padding:5px;border-radius:14px}
+nav button{padding:12px 22px;border-radius:10px;font-weight:600;color:var(--mut)}
+nav button.on{background:var(--pri);color:var(--pi)}
+main{padding:0 20px 28px;max-width:1200px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+.split{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:18px}
+@media (max-width:760px){.split{grid-template-columns:1fr}}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:4px 0 10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+.out{border:2px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.out.warn{border-color:var(--warn)}.out.bad{border-color:var(--bad)}
+.out b{display:block;font-size:20px}.out small{color:var(--mut)}
+.timer{font-variant-numeric:tabular-nums;font-size:26px;font-weight:700;margin-left:auto}
+.warn .timer{color:var(--warn)}.bad .timer{color:var(--bad)}
+.ret{background:var(--ok);color:#fff;padding:14px 16px;border-radius:12px;font-weight:700}
+.empty{color:var(--mut);padding:18px 4px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stu{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 10px;font-weight:600;min-height:68px}
+.stu:active{transform:scale(.97)}
+.stu[disabled]{opacity:.4}
+#pbar{display:flex;gap:8px;overflow-x:auto;padding:0 20px 14px;max-width:1200px;margin:0 auto}
+.pc{flex:none;padding:12px 20px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:600}
+.pc.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pc.add{color:var(--mut);border-style:dashed}
+.banner{display:none;width:calc(100% - 40px);max-width:1160px;margin:0 auto 14px;background:var(--bad);color:#fff;padding:14px 18px;border-radius:14px;font-weight:700}
+body:not(.teacher) .tonly{display:none}
+.lin{width:100%;font:inherit;font-size:22px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-bottom:10px}
+#lock{align-items:center}#lock .sheet{border-radius:24px;max-width:420px;margin:0 20px}
+.fi{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.mini{padding:6px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-weight:700}
+#dlg{align-items:center}#dlg .sheet{border-radius:24px;max-width:460px;margin:0 20px}
+.modal{position:fixed;inset:0;background:rgba(10,14,25,.55);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:640px;border-radius:24px 24px 0 0;padding:22px 22px calc(22px + env(safe-area-inset-bottom,0px))}
+.sheet h3{margin:0 0 14px;font-size:24px}
+.dests{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dest{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:18px 6px;font-weight:600;font-size:17px}
+.dest span{display:block;font-size:32px}
+.cancel{margin-top:14px;width:100%;padding:14px;color:var(--mut);font-weight:600}
+.pass{text-align:center;padding:10px}
+.pass .big{font-size:34px;font-weight:800}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:14px 22px;border-radius:14px;z-index:30;display:none;font-weight:600}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:14px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+textarea{width:100%;min-height:220px;font:inherit;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.btn{background:var(--pri);color:var(--pi);padding:14px 22px;border-radius:12px;font-weight:700}
+.btn.g{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.set{display:flex;align-items:center;gap:12px;margin:10px 0}
+.set input[type=number]{width:80px;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.set input[type=checkbox]{width:26px;height:26px}
+</style></head>
 <body>
-  <header class="app-header">
-    <h1>🍎 Hall Pass</h1>
-    <nav class="tabs">
-      <button class="tab is-active" data-tab="teacher">Teacher</button>
-      <button class="tab" data-tab="student">Student</button>
-    </nav>
-  </header>
-
-  <main class="view is-active" id="view">
-    <!-- TEACHER VIEW -->
-    <section id="teacher-view" class="view-panel is-active">
-      <div class="teacher-header">
-        <button class="primary-btn" id="issue-btn">+ New Pass</button>
-        <span class="spacer"></span>
-        <span class="live-badge" id="live-badge" title="Live updates">● Receiving updates</span>
-      </div>
-
-      <div class="panel-title">Students Out (active)</div>
-      <ul id="active-list" class="student-list"></ul>
-
-      <div class="panel-title">History</div>
-      <div class="tablet-scroll">
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Destination</th>
-              <th>Issued</th>
-              <th>Returned</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="history-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- STUDENT VIEW -->
-    <section id="student-view" class="view-panel" hidden>
-      <div class="panel-title">Check in with your pass</div>
-      <div class="input-row">
-        <input
-          id="pass-code"
-          class="text-input"
-          placeholder="Enter 6-letter pass code"
-          autocomplete="off"
-        />
-        <button class="primary-btn" id="checkin-btn">Check in</button>
-      </div>
-      <div id="student-result"></div>
-    </section>
-  </main>
-
-  <!-- ISSUE PASS MODAL -->
-  <div class="modal-backdrop" id="modal" hidden>
-    <div class="modal">
-      <div class="modal-head">
-        <h2>Issue a Hall Pass</h2>
-        <button class="icon-btn" id="close-modal" aria-label="Close">&times;</button>
-      </div>
-      <form id="issue-form">
-        <div class="form-grid">
-          <div class="field">
-            <label for="stu-select">Student</label>
-            <select id="stu-select">
-              <option value="">Choose a student…</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="destination">Destination</label>
-            <input id="destination" placeholder="e.g. Nurse, Library, Full restroom" />
-          </div>
-        </div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="dest-note">Destination note <span class="muted">(optional)</span></label>
-            <input id="dest-note" placeholder="e.g. nurse's office, 2nd floor" />
-          </div>
-          <div class="field">
-            <label for="issued-by">Issued by <span class="muted">(optional)</span></label>
-            <input id="issued-by" placeholder="Your name" />
-          </div>
-        </div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="expires">Expires at <span class="muted">(optional)</span></label>
-            <input id="expires" type="datetime-local" />
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="ghost-btn" id="cancel-modal">Cancel</button>
-          <button type="submit" class="primary-btn">Issue Pass</button>
-        </div>
-        <div id="issue-result" class="modal-message"></div>
-      </form>
+<header>
+  <h1>🚪 Hall Pass <small id="sync" style="font-size:14px;font-weight:500;color:var(--mut)"></small></h1>
+  <nav id="nav"><button class="on" data-v="v1">Sign Out</button><button class="tonly" data-v="v2">Log</button><button class="tonly" data-v="v3">Settings</button><button class="tonly" data-v="v4">Passes</button></nav><button class="btn g" id="lockBtn"></button>
+</header>
+<div id="pbar"></div>
+<div id="banner" class="banner"></div>
+<main>
+  <section class="view on" id="v1">
+    <div class="split">
+      <div><h2>Currently out</h2><div class="panel" id="outList"></div><h2 style="margin-top:18px">Waiting in line</h2><div class="panel" id="queueList"></div></div>
+      <div><h2 id="gridTitle">Tap your name</h2><div class="grid" id="grid"></div></div>
     </div>
-  </div>
+  </section>
+  <section class="view" id="v2">
+    <h2>Sign-out log</h2>
+    <div class="panel" id="logCtl" style="margin-bottom:10px"></div><p id="logNote" style="color:var(--mut);margin:0 0 10px"></p>
+    <div class="panel wrap"><table><thead id="logHead"></thead><tbody id="logBody"></tbody></table><div class="empty" id="logEmpty">No sign-outs yet.</div></div>
+    <div class="row"><button class="btn" id="expX">Export spreadsheet</button><button class="btn" id="expP">Export PDF</button><button class="btn g" id="clearLog">Clear log</button></div>
+  </section>
+  <section class="view" id="v3">
+    <div class="split">
+      <div><h2>Class roster</h2><div class="panel">
+        <label class="set" style="margin-top:0">Period name <input type="text" id="pname" style="flex:1;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></label>
+        <label class="set" style="margin-top:0">Class starts at <input type="time" id="pstart" style="font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></label>
+        <label class="set">Class ends at <input type="time" id="pend" style="font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></label>
+        <p style="margin:0 0 8px;color:var(--mut)">One student name per line.</p>
+        <textarea id="names" placeholder="Ava M.&#10;Jordan T.&#10;Sam R."></textarea>
+        <div class="row"><button class="btn" id="saveNames">Save roster</button><button class="btn g" id="impBtn">Import spreadsheet or PDF</button><input type="file" id="impFile" accept=".csv,.tsv,.txt,.xlsx,.xls,.pdf" hidden><button class="btn g" id="sample">Load sample names</button><button class="btn g" id="delP">Delete period</button></div>
+      </div></div>
+      <div><h2>Rules</h2><div class="panel">
+        <label class="set">Students allowed out at once <input type="number" id="maxOut" min="0" max="20"> <small style="color:var(--mut)">0 = no limit</small></label>
+        <label class="set">Warn a student when they have <input type="number" id="warnLeft" min="0" max="10"> pass(es) left <small style="color:var(--mut)">0 = off</small></label><input type="checkbox" id="one" hidden>
+        <label class="set">Warn after <input type="number" id="warn" min="1" max="60"> minutes</label>
+        <label class="set">No passes in the last <input type="number" id="cutoff" min="0" max="30"> minutes of class <small style="color:var(--mut)">0 = off</small></label>
+        <label class="set">No passes in the first <input type="number" id="startBlock" min="0" max="30"> minutes of class <small style="color:var(--mut)">0 = off</small></label>
+        <div id="limitGrid"></div><input type="number" id="limit" hidden>
+        <div id="terms"></div><input type="date" id="qdate" hidden>
+        <input type="checkbox" id="bathOnly" hidden>
+        <button id="newQ" hidden></button>
+        <label class="set">Auto-lock teacher portal after <input type="number" id="lockMin" min="1" max="60"> minutes idle</label>
+        <div class="row"><button class="btn g" id="chgPw">Change teacher passcode</button></div>
+      </div></div>
+    </div>
+  </section>
+<section class="view" id="v4">
+    <h2 id="passTitle">Passes</h2>
+    <p id="passNote" style="color:var(--mut);margin-top:0"></p>
+    <div class="panel wrap"><table><thead id="passHead"></thead><tbody id="passBody"></tbody></table><div class="empty" id="passEmpty">Add students on the Roster tab.</div></div>
+  </section>
+</main>
+<div class="modal" id="modal"><div class="sheet">
+  <h3 id="mName"></h3><div class="dests" id="dests"></div><button class="btn" id="exBtn" style="display:none;width:100%;margin-top:12px">Teacher approval: allow one extra pass</button>
+  <button class="cancel" id="mCancel">Cancel</button>
+</div></div>
+<div class="modal" id="lock"><div class="sheet"><h3 id="lTitle"></h3><input class="lin" type="password" id="lPass" placeholder="Passcode" autocomplete="off"><input class="lin" type="password" id="lPass2" placeholder="Confirm passcode" autocomplete="off"><p id="lMsg" style="color:var(--bad);min-height:1.4em;margin:0 0 8px;font-weight:600"></p><div class="row" style="margin:0"><button class="btn" id="lGo">Enter</button><button class="btn g" id="lCancel">Cancel</button></div><p style="color:var(--mut);font-size:15px;margin:12px 0 0">Forgot it? Ask Claude to reset it for you.</p></div></div>
+<div class="modal" id="dlg"><div class="sheet"><h3 id="dTitle"></h3><p id="dText" style="font-size:20px;margin:0 0 18px"></p><div class="row" style="margin:0"><button class="btn" id="dOk"></button><button class="btn g" id="dNo">Cancel</button></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+/* ===== SYNC SETUP: paste your Firebase web app config here (see README.md) ===== */
+const FIREBASE_CONFIG={apiKey:"",authDomain:"",projectId:"",appId:""};
+/* ================================================================================ */
+const hpConfigured=()=>!!(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.projectId);
+let hpDbP=null,hpLive=false;
 
-  <script src="/app.js"></script>
-</body>
-</html>
+/* Wraps Firebase Firestore in the small interface the app uses. */
+function hpMakeDb(fs,db){
+  const snapDoc=s=>({id:s.id,exists:s.exists(),data:()=>s.data()});
+  return {
+    doc(path){
+      const r=fs.doc(db,path);
+      return {set:d=>fs.setDoc(r,d),delete:()=>fs.deleteDoc(r),onSnapshot:(ok,err)=>fs.onSnapshot(r,s=>ok(snapDoc(s)),err)};
+    },
+    collection(name){
+      const c=fs.collection(db,name);
+      const q=base=>({
+        orderBy:f=>q(fs.query(base,fs.orderBy(f))),
+        get:async()=>({docs:(await fs.getDocs(base)).docs.map(snapDoc)}),
+        onSnapshot:(ok,err)=>fs.onSnapshot(base,s=>ok({docs:s.docs.map(snapDoc)}),err)
+      });
+      return Object.assign(q(c),{
+        add:d=>fs.addDoc(c,JSON.parse(JSON.stringify(d))),
+        doc:id=>{const r=fs.doc(db,name,id);return {set:d=>fs.setDoc(r,d),delete:()=>fs.deleteDoc(r)}}
+      });
+    }
+  };
+}
+
+/* Sign-in box shown once per device. Resolves {email,pw} or null if skipped. */
+function hpOverlay(msg){
+  return new Promise(res=>{
+    const d=document.createElement('div');
+    d.style.cssText='position:fixed;inset:0;background:rgba(10,14,25,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px';
+    const f='width:100%;font:inherit;font-size:20px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-bottom:10px;box-sizing:border-box';
+    const b='font:inherit;font-weight:700;padding:14px 22px;border-radius:12px;border:0;cursor:pointer';
+    d.innerHTML='<div style="background:var(--card);color:var(--ink);border-radius:24px;padding:24px;max-width:420px;width:100%;font:18px system-ui,sans-serif"><h3 style="margin:0 0 6px;font-size:24px">Connect this device</h3><p style="color:var(--mut);margin:0 0 14px">Sign in with the teacher sync account so this device shares data with your others.</p><input id="hpE" type="email" placeholder="Email" autocomplete="username" style="'+f+'"><input id="hpP" type="password" placeholder="Password" autocomplete="current-password" style="'+f+'"><p id="hpM" style="color:var(--bad);min-height:1.4em;margin:0 0 8px;font-weight:600"></p><div style="display:flex;gap:10px;flex-wrap:wrap"><button id="hpGo" style="'+b+';background:var(--pri);color:var(--pi)">Connect</button><button id="hpSkip" style="'+b+';background:var(--bg);color:var(--ink);border:1px solid var(--line)">Use without syncing</button></div></div>';
+    document.body.appendChild(d);
+    const $$=id=>d.querySelector('#'+id);
+    $$('hpM').textContent=msg||'';
+    const done=v=>{d.remove();res(v)};
+    $$('hpGo').onclick=()=>done({email:$$('hpE').value.trim(),pw:$$('hpP').value});
+    $$('hpSkip').onclick=()=>done(null);
+    $$('hpP').onkeydown=e=>{if(e.key==='Enter')$$('hpGo').click()};
+  });
+}
+
+async function hpConnect(){
+  const B='https://www.gstatic.com/firebasejs/10.12.2/';
+  const [app,fs,au]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-firestore.js'),import(B+'firebase-auth.js')]);
+  const a=app.initializeApp(FIREBASE_CONFIG),auth=au.getAuth(a);
+  let user=await new Promise(r=>{const un=au.onAuthStateChanged(auth,x=>{un();r(x)})});
+  let msg='';
+  while(!user){
+    const r=await hpOverlay(msg);
+    if(!r)return null;
+    try{user=(await au.signInWithEmailAndPassword(auth,r.email,r.pw)).user}
+    catch(e){msg='Sign-in failed. Check the email and password.'}
+  }
+  let db;
+  try{db=fs.initializeFirestore(a,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})})}
+  catch(e){db=fs.getFirestore(a)}
+  hpLive=true;
+  return hpMakeDb(fs,db);
+}
+
+async function hpSave({filename,data}){
+  const ext=filename.split('.').pop();
+  const mime={pdf:'application/pdf',csv:'text/csv',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}[ext]||'application/octet-stream';
+  const blob=data instanceof Blob?data:new Blob([data],{type:mime});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+
+/* The app talks to window.claude.use(...); this supplies the same two features without Claude. */
+window.claude={use:async name=>{
+  if(name==='downloads')return {save:hpSave};
+  if(name==='db')return hpConfigured()?(hpDbP||(hpDbP=hpConnect())):null;
+  return null;
+}};
+document.addEventListener('click',e=>{
+  if(e.target&&e.target.id==='sync'&&hpConfigured()&&!hpLive)hpConnect().then(d=>{if(d)location.reload()}).catch(()=>{});
+});
+</script>
+<script>
+const KEY='hallpass-v1';
+let S={students:[],out:[],log:[],oneBath:true,warn:5,limit:0,qStart:0,bathOnly:false,bonus:{},queue:[],cutoff:5,auth:null,lockMin:5,startBlock:10,limits:{},maxOut:1,warnLeft:1,mig2:false,terms:[{name:'1st 9 weeks',start:''},{name:'2nd 9 weeks',start:''},{name:'3rd 9 weeks',start:''},{name:'4th 9 weeks',start:''}]};
+try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+if(!S.periods||!S.periods.length){S.periods=[{id:1,name:'Period 1',students:S.students||[]}];S.cur=1}
+if(!S.periods.some(p=>p.id===S.cur))S.cur=S.periods[0].id;
+const P=()=>S.periods.find(p=>p.id===S.cur);
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}pushState()};
+const D=[['Bathroom','🚻'],['Water','💧'],['Nurse','🩺'],['Office','🏢'],['Locker','🔒'],['Other','🚶']];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const clock=t=>new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+const day=t=>new Date(t).toLocaleDateString([],{month:'short',day:'numeric'});
+const icon=d=>(D.find(x=>x[0]===d)||D[5])[1];
+let picked=null,tt;
+
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',2600)}
+
+function renderOut(){
+  const el=$('outList');
+  if(!S.out.length){el.innerHTML='<div class="empty">Nobody is out. 🎉</div>';return}
+  el.innerHTML=S.out.map((o,i)=>{
+    const e=Date.now()-o.start,w=S.warn*60000;
+    const c=e>2*w?'bad':e>w?'warn':'';
+    return `<div class="out ${c}"><div><b>${icon(o.dest)} ${esc(o.name)}</b><small>${esc(o.dest)} · ${o.p?esc(o.p)+' · ':''}left ${clock(o.start)}</small></div><div class="timer">${mmss(e)}</div><button class="ret" data-i="${i}">Back</button></div>`;
+  }).join('');
+}
+function renderGrid(){
+  const g=$('grid');
+  if(!P().students.length){g.innerHTML='<div class="empty" style="grid-column:1/-1">Teacher: tap the lock button at the top to log in and add your students.</div>';return}
+  g.innerHTML=P().students.map((n,i)=>{
+    const out=S.out.some(o=>o.name===n&&o.pid===S.cur)||S.queue.some(o=>o.name===n&&o.pid===S.cur);
+    return `<button class="stu" data-i="${i}" ${out?'disabled':''}>${esc(n)}${S.limit?`<small style="display:block;font-weight:500;color:${leftOf(S.cur,n)<=0?'var(--bad)':'var(--mut)'}">${leftOf(S.cur,n)} left</small>`:''}</button>`;
+  }).join('');
+}
+function renderLog(){
+  const rows=[...S.log].reverse();
+  $('logEmpty').style.display=rows.length?'none':'block';
+  $('logBody').innerHTML=rows.map(l=>`<tr><td><b>${esc(l.name)}</b></td><td>${esc(l.p||'')}</td><td>${icon(l.dest)} ${esc(l.dest)}</td><td>${day(l.start)}</td><td>${clock(l.start)}</td><td>${clock(l.end)}</td><td>${mmss(l.end-l.start)}</td></tr>`).join('');
+}
+function renderRoster(){
+  $('names').value=P().students.join('\n');$('pname').value=P().name;$('pend').value=P().end||'';$('pstart').value=P().start||'';$('one').checked=S.oneBath;$('warn').value=S.warn;$('limit').value=S.limit;$('cutoff').value=S.cutoff;$('lockMin').value=S.lockMin;$('startBlock').value=S.startBlock;renderTerms();$('maxOut').value=S.maxOut;$('warnLeft').value=S.warnLeft;renderLimits();renderLogCtl();$('bathOnly').checked=S.bathOnly;$('qdate').value=S.qStart?ymd(S.qStart):'';
+}
+function renderBar(){
+  $('pbar').innerHTML=(T?S.periods:S.periods.filter(p=>p.id===S.cur)).map(p=>`<button class="pc ${(T?p.id===S.cur:true)?'on':''}" data-id="${p.id}">${esc(p.name)}${T&&(live()||{}).id===p.id?' ●':''}</button>`).join('')+(T?'<button class="pc add" id="addP">＋ Add period</button>':'');
+}
+const ymd=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const bkey=(pid,n)=>curTerm()+'|'+pid+'|'+n;
+function used(pid,n){
+  const pn=(S.periods.find(p=>p.id===pid)||{}).name;
+  return S.log.concat(S.out).filter(x=>x.name===n&&x.start>=qStartMs()&&(!S.bathOnly||x.dest==='Bathroom')&&(x.pid===pid||(x.pid==null&&x.p===pn))).length;
+}
+const allowed=(pid,n)=>Math.max(0,S.limit+(S.bonus[bkey(pid,n)]||0));
+const leftOf=(pid,n)=>Math.max(0,allowed(pid,n)-used(pid,n));
+function renderPasses(){
+  $('passTitle').textContent='Passes · '+P().name;
+  const rows=P().students.map(n=>{
+    const u=used(S.cur,n),k=bkey(S.cur,n),b=S.bonus[k]||0;
+    const a=S.limit?allowed(S.cur,n):'—',l=S.limit?leftOf(S.cur,n):'—';
+    return `<tr><td><b>${esc(n)}</b></td><td>${u}</td><td>${a}</td><td style="font-weight:700;color:${S.limit&&l===0?'var(--bad)':'inherit'}">${l}</td><td><button class="btn g" data-k="${esc(k)}" data-d="-1">−1</button> <button class="btn g" data-k="${esc(k)}" data-d="1">+1</button>${b?` <small style="color:var(--mut)">(${b>0?'+':''}${b} bonus)</small>`:''}</td></tr>`;
+  }).join('');
+  $('passBody').innerHTML=rows;
+  $('passEmpty').style.display=rows?'none':'block';
+  $('passNote').textContent=(S.limit?S.limit+' passes each':'No limit set')+' · '+(qStartMs()?'counting since '+day(qStartMs())+(termName()?' ('+termName()+')':''):'counting all time')+(S.bathOnly?' · bathroom only':'');
+}
+let DB=null,stRef=null,logCol=null,lastV='';
+let T=false,lastAct=Date.now(),lockMode='login';
+function endMs(p){if(!p||!p.end)return null;const [h,m]=p.end.split(':').map(Number);const d=new Date();d.setHours(h,m,0,0);return d.getTime()}
+function cutoffBlocked(pid){const e=endMs(S.periods.find(x=>x.id===pid));if(!e||!S.cutoff)return false;const n=Date.now();return n>=e-S.cutoff*60000&&n<e}
+function blockReason(en){
+  if(cutoffBlocked(en.pid))return 'No passes in the last '+S.cutoff+' minutes of class.';
+  if(S.limit&&(!S.bathOnly||en.dest==='Bathroom')&&leftOf(en.pid,en.name)<=0)return en.name+' is out of passes for this 9 weeks.';
+  return '';
+}
+function startPass(en){S.out.push({name:en.name,dest:en.dest,start:Date.now(),pid:en.pid,p:en.p})}
+function promote(){
+  while(S.oneBath&&!S.out.length&&S.queue.length){
+    const n=S.queue.shift(),why=blockReason(n);
+    if(why){toast(n.name+' was removed from the line. '+why);continue}
+    startPass(n);toast(n.name+' is up next and has been signed out.');
+  }
+}
+function renderQueue(){
+  $('queueList').innerHTML=S.queue.length?S.queue.map((q,i)=>`<div class="out"><div><b>${i+1}. ${icon(q.dest)} ${esc(q.name)}</b><small>${esc(q.dest)}${q.p?' · '+esc(q.p):''}</small></div>${T?`<button class="btn g" style="margin-left:auto" data-i="${i}">Remove</button>`:''}</div>`).join(''):'<div class="empty">No one waiting.</div>';
+}
+function renderBanner(){
+  const el=$('banner'),p=P(),e=p&&endMs(p);
+  if(p&&cutoffBlocked(p.id)){el.style.display='block';el.textContent='🚫 No passes in the last '+S.cutoff+' minutes of class (ends '+clock(e)+').'}else el.style.display='none';
+}
+function addLog(en){if(logCol)logCol.add(en).catch(()=>{S.log.push(en);renderLog()});else S.log.push(en)}
+function pushState(){
+  if(!stRef)return;
+  const {log,cur,...r}=S,v=JSON.stringify(r);
+  if(v===lastV)return;lastV=v;stRef.set({v}).catch(()=>{$('sync').textContent='Sync problem'});
+}
+function initDb(db){
+  if(!db)return;
+  DB=db;stRef=db.doc('hallpass/state');logCol=db.collection('hallpass_log');
+  let first=true;
+  stRef.onSnapshot(snap=>{
+    if(!snap.exists){
+      if(first){first=false;pushState();S.log.forEach(l=>logCol.add(l).catch(()=>{}))}
+      $('sync').textContent='● Live sync on';return;
+    }
+    first=false;
+    const v=snap.data().v;
+    if(v!==lastV){
+      lastV=v;
+      try{const cur=S.cur;Object.assign(S,JSON.parse(v));S.cur=S.periods.some(p=>p.id===cur)?cur:S.periods[0].id;renderRoster();all()}catch(e){}
+    }
+    $('sync').textContent='● Live sync on';
+  },()=>{$('sync').textContent='Saved on this device'});
+  logCol.orderBy('start').onSnapshot(snap=>{S.log=snap.docs.map(d=>d.data());renderLog();renderPasses();renderGrid()},()=>{});
+}
+function all(){renderBar();renderOut();renderQueue();renderGrid();renderLog();renderPasses();renderBanner();renderLockBtn()}
+
+$('nav').onclick=e=>{if(e.target.closest('button')&&!T&&e.target.closest('button').dataset.v!=='v1')return;
+  const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id===b.dataset.v));
+};
+$('grid').onclick=e=>{
+  const b=e.target.closest('.stu');if(!b||b.disabled)return;
+  picked=P().students[+b.dataset.i];
+  $('mName').textContent=picked+' is going to…';
+  $('dests').innerHTML=D.map(d=>`<button class="dest" data-d="${d[0]}"><span>${d[1]}</span>${d[0]}</button>`).join('');
+  $('modal').classList.add('on');
+};
+$('dests').onclick=e=>{
+  const b=e.target.closest('.dest');if(!b)return;
+  const d=b.dataset.d;
+  const why=blockReason({name:picked,dest:d,pid:S.cur});if(why){toast(why);return}
+  const en={name:picked,dest:d,pid:S.cur,p:P().name};
+  if(S.oneBath&&S.out.length){S.queue.push(en);toast(picked+' is #'+S.queue.length+' in line. You’ll go when '+S.out[0].name+' is back.')}
+  else{startPass(en);toast('Signed out. Have a good trip!')}
+  save();
+  $('modal').classList.remove('on');all();
+};
+$('mCancel').onclick=()=>$('modal').classList.remove('on');
+$('modal').onclick=e=>{if(e.target.id==='modal')$('modal').classList.remove('on')};
+$('outList').onclick=e=>{
+  const b=e.target.closest('.ret');if(!b)return;
+  const o=S.out.splice(+b.dataset.i,1)[0];
+  addLog({name:o.name,dest:o.dest,start:o.start,end:Date.now(),p:o.p,pid:o.pid});toast('Welcome back, '+o.name+'!');promote();save();all();
+};
+let armed=false;
+$('clearLog').onclick=function(){
+  if(!armed){armed=true;this.textContent='Tap again to confirm';setTimeout(()=>{armed=false;this.textContent='Clear log'},3000);return}
+  if(logCol)logCol.get().then(s=>s.docs.forEach(d=>logCol.doc(d.id).delete())).catch(()=>{});S.log=[];save();armed=false;this.textContent='Clear log';renderLog();renderPasses();renderGrid();
+};
+$('saveNames').onclick=()=>{
+  const seen=new Set();P().name=$('pname').value.trim()||P().name;
+  P().students=$('names').value.split('\n').map(s=>s.trim()).filter(s=>s&&!seen.has(s)&&seen.add(s)).sort((a,b)=>a.localeCompare(b));
+  save();all();toast('Roster saved ('+P().students.length+')');
+};
+$('sample').onclick=()=>{$('names').value=['Ava M.','Ben K.','Chloe R.','Diego S.','Emma L.','Finn O.','Grace H.','Hassan A.','Isla P.','Jordan T.'].join('\n')};
+$('one').onchange=e=>{S.oneBath=e.target.checked;if(!S.oneBath){S.queue.forEach(q=>{if(!blockReason(q))startPass(q)});S.queue=[]}save();all()};
+$('cutoff').onchange=e=>{S.cutoff=Math.min(30,Math.max(0,Math.floor(+e.target.value||0)));e.target.value=S.cutoff;save();all()};
+$('pend').onchange=e=>{P().end=e.target.value;save();all()};
+$('queueList').onclick=e=>{if(!T)return;const b=e.target.closest('button');if(!b)return;S.queue.splice(+b.dataset.i,1);save();all()};
+$('limit').onchange=e=>{S.limit=Math.min(99,Math.max(0,Math.floor(+e.target.value||0)));e.target.value=S.limit;save();all()};
+$('bathOnly').onchange=e=>{S.bathOnly=e.target.checked;save();all()};
+$('qdate').onchange=e=>{S.qStart=e.target.value?new Date(e.target.value+'T00:00:00').getTime():0;save();all()};
+let armQ=false;
+$('newQ').onclick=function(){
+  if(!armQ){armQ=true;this.textContent='Tap again to confirm';setTimeout(()=>{armQ=false;this.textContent='Start new 9 weeks'},3000);return}
+  const d=new Date();d.setHours(0,0,0,0);S.qStart=d.getTime();S.bonus={};save();armQ=false;this.textContent='Start new 9 weeks';$('qdate').value=ymd(S.qStart);all();toast('New 9 weeks started. Everyone\u2019s count is reset.');
+};
+$('passBody').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k;S.bonus[k]=(S.bonus[k]||0)+(+b.dataset.d);if(!S.bonus[k])delete S.bonus[k];save();all()};
+$('warn').onchange=e=>{S.warn=Math.min(60,Math.max(1,+e.target.value||5));e.target.value=S.warn;save()};
+
+$('pbar').onclick=e=>{if(!T)return;
+  const b=e.target.closest('button');if(!b)return;
+  if(b.id==='addP'){const id=Math.max(...S.periods.map(p=>p.id))+1;S.periods.push({id,name:'Period '+(S.periods.length+1),students:[]});S.cur=id;save();renderRoster();all();document.querySelector('[data-v=v3]').click();return}
+  S.cur=+b.dataset.id;save();renderRoster();all();
+};
+let armD=false;
+$('delP').onclick=function(){
+  if(S.periods.length<2){toast('You need at least one period.');return}
+  if(!armD){armD=true;this.textContent='Tap again to confirm';setTimeout(()=>{armD=false;this.textContent='Delete period'},3000);return}
+  S.periods=S.periods.filter(p=>p.id!==S.cur);S.cur=S.periods[0].id;save();armD=false;this.textContent='Delete period';renderRoster();all();
+};
+renderRoster();all();
+renderLockBtn();applyMode();
+setInterval(()=>{renderOut();renderBanner();autoLock();liveCheck()},1000);
+async function hash(pw,salt){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+':'+pw));return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+function renderLockBtn(){$('lockBtn').textContent=T?'🔓 Lock':(S.auth?'🔒 Teacher login':'🔒 Set up teacher login')}
+function applyMode(){
+  document.body.classList.toggle('teacher',T);
+  if(!T){const on=document.querySelector('.view.on');if(on&&on.id!=='v1')document.querySelector('[data-v=v1]').click()}
+  all();
+}
+function autoLock(){if(T&&Date.now()-lastAct>(S.lockMin||5)*60000){T=false;applyMode();toast('Teacher portal locked (idle).')}}
+function openLock(mode){
+  if(T&&mode!=='change'){T=false;applyMode();toast('Teacher portal locked.');return}
+  lockMode=mode||(S.auth?'login':'setup');
+  const setup=lockMode!=='login';
+  $('lTitle').textContent=lockMode==='change'?'New teacher passcode':setup?'Create a teacher passcode':'Teacher login';
+  $('lPass2').style.display=setup?'block':'none';
+  $('lPass').value='';$('lPass2').value='';$('lMsg').textContent='';
+  $('lock').classList.add('on');setTimeout(()=>$('lPass').focus(),60);
+}
+async function submitLock(){
+  const pw=$('lPass').value,msg=t=>{$('lMsg').textContent=t};
+  try{
+    if(lockMode==='login'){
+      if(!S.auth)return msg('No passcode is set yet.');
+      if(await hash(pw,S.auth.salt)!==S.auth.hash){$('lPass').value='';return msg('Wrong passcode.')}
+    }else{
+      if(lockMode==='setup'&&S.auth)return msg('A passcode was just set. Close this and log in.');
+      if(pw.length<4)return msg('Use at least 4 characters.');
+      if(pw!==$('lPass2').value)return msg('Passcodes don’t match.');
+      const salt=Math.random().toString(36).slice(2)+Date.now().toString(36);
+      S.auth={salt,hash:await hash(pw,salt)};save();
+    }
+  }catch(e){return msg('Login isn’t available in this browser.')}
+  T=true;lastAct=Date.now();$('lock').classList.remove('on');applyMode();renderRoster();
+  toast(lockMode==='change'?'Passcode changed.':'Teacher portal unlocked.');
+  if(afterLogin){const f=afterLogin;afterLogin=null;f()}
+}
+$('lockBtn').onclick=()=>openLock();
+$('chgPw').onclick=()=>openLock('change');
+$('lGo').onclick=submitLock;
+$('lCancel').onclick=()=>$('lock').classList.remove('on');
+['lPass','lPass2'].forEach(id=>{$(id).onkeydown=e=>{if(e.key==='Enter')submitLock()}});
+$('lockMin').onchange=e=>{S.lockMin=Math.min(60,Math.max(1,Math.floor(+e.target.value||5)));e.target.value=S.lockMin;save()};
+document.addEventListener('pointerdown',()=>{lastAct=Date.now()},true);
+
+let pickedP=null,pendingEx=null,afterLogin=null,lastLive=null;
+function tMs(hm){const [h,m]=hm.split(':').map(Number);const d=new Date();d.setHours(h,m,0,0);return d.getTime()}
+function live(){
+  const timed=S.periods.filter(p=>p.start&&p.end);
+  if(!timed.length)return P();
+  const n=Date.now();
+  return timed.find(p=>n>=tMs(p.start)&&n<tMs(p.end))||null;
+}
+function liveCheck(){const l=(live()||{}).id??null;if(l!==lastLive){lastLive=l;all()}}
+function timeReason(pid){
+  const p=S.periods.find(x=>x.id===pid);if(!p)return '';
+  const n=Date.now();
+  if(p.start&&S.startBlock){const s=tMs(p.start),u=s+S.startBlock*60000;if(n>=s&&n<u)return 'No passes in the first '+S.startBlock+' minutes of class (until '+clock(u)+').'}
+  if(p.end&&S.cutoff){const e=tMs(p.end);if(n>=e-S.cutoff*60000&&n<e)return 'No passes in the last '+S.cutoff+' minutes of class.'}
+  return '';
+}
+function blockReason(en){
+  const t=timeReason(en.pid);if(t)return t;
+  if(S.limit&&(!S.bathOnly||en.dest==='Bathroom')&&leftOf(en.pid,en.name)<=0)return en.name+' is out of passes for this 9 weeks.';
+  return '';
+}
+function startPass(en){S.out.push({name:en.name,dest:en.dest,start:Date.now(),pid:en.pid,p:en.p,ex:en.ex})}
+function enqueueOrStart(en){
+  if(S.oneBath&&(S.out.length||S.queue.length)){S.queue.push(en);toast(en.name+' is #'+S.queue.length+' in line.')}
+  else{startPass(en);toast('Signed out. Have a good trip!')}
+}
+function promote(){
+  let w;
+  while(S.queue.length&&(w=blockReason(S.queue[0]))){const n=S.queue.shift();toast(n.name+' was removed from the line. '+w)}
+  if(S.queue.length&&!S.out.length)toast(S.queue[0].name+', it’s your turn. Tap Start Pass.');
+}
+function curTerm(){
+  const now=Date.now();let best=-1,bs=-1;
+  S.terms.forEach((t,i)=>{if(!t.start)return;const s=new Date(t.start+'T00:00:00').getTime();if(s<=now&&s>bs){bs=s;best=i}});
+  return best;
+}
+function qStartMs(){const i=curTerm();return i<0?0:new Date(S.terms[i].start+'T00:00:00').getTime()}
+function termName(){const i=curTerm();return i<0?'':S.terms[i].name}
+function renderTerms(){
+  const c=termName();
+  $('terms').innerHTML='<p style="margin:0 0 6px;color:var(--mut)">Passes restart on each start date. '+(c?'Now in the '+esc(c)+'.':'No start date has passed yet, so all passes are being counted.')+'</p>'+S.terms.map((t,i)=>`<label class="set">${esc(t.name)} starts <input type="date" data-t="${i}" value="${esc(t.start)}" style="font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></label>`).join('');
+}
+$('terms').onchange=e=>{const i=e.target.dataset.t;if(i==null)return;S.terms[+i].start=e.target.value;save();all();renderTerms()};
+function renderBanner(){
+  const el=$('banner'),lp=live(),t=lp&&timeReason(lp.id);
+  if(t){el.style.display='block';el.textContent='🚫 '+t}
+  else if(!lp){el.style.display='block';el.textContent='🕒 No class is in session right now.'}
+  else el.style.display='none';
+}
+function renderGrid(){
+  const g=$('grid'),lp=live();
+  $('gridTitle').textContent=lp?'Tap your name · '+lp.name:'Tap your name';
+  if(!lp){g.innerHTML='<div class="empty" style="grid-column:1/-1">No class is in session right now.</div>';return}
+  if(!lp.students.length){g.innerHTML='<div class="empty" style="grid-column:1/-1">Teacher: tap the lock button at the top to log in and add your students.</div>';return}
+  g.innerHTML=lp.students.map((n,i)=>{
+    const busy=S.out.some(o=>o.name===n&&o.pid===lp.id)||S.queue.some(o=>o.name===n&&o.pid===lp.id);
+    const l=leftOf(lp.id,n);
+    return `<button class="stu" data-i="${i}" ${busy?'disabled':''}>${esc(n)}${S.limit?`<small style="display:block;font-weight:500;color:${l<=0?'var(--bad)':'var(--mut)'}">${l} left</small>`:''}</button>`;
+  }).join('');
+}
+function renderQueue(){
+  const el=$('queueList');
+  if(!S.queue.length){el.innerHTML='<div class="empty">No one waiting.</div>';return}
+  const free=!S.out.length;
+  el.innerHTML=S.queue.map((q,i)=>{
+    const ready=free&&i===0;
+    return `<div class="out ${ready?'warn':''}"><div><b>${i+1}. ${icon(q.dest)} ${esc(q.name)}</b><small>${ready?'Your turn! Tap Start Pass.':esc(q.dest)+(q.p?' · '+esc(q.p):'')+(q.ex?' · exception':'')}</small></div>${ready?`<button class="ret" style="margin-left:auto" data-a="go" data-i="${i}">▶ Start Pass</button>`:''}${T?`<button class="btn g" style="${ready?'':'margin-left:auto'}" data-a="rm" data-i="${i}">Remove</button>`:''}</div>`;
+  }).join('');
+}
+$('queueList').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;
+  if(b.dataset.a==='go'){
+    const q=S.queue[i];if(!q||i!==0)return;
+    if(S.out.length){toast('Wait until '+S.out[0].name+' is back.');return}
+    const why=blockReason(q);S.queue.splice(i,1);
+    if(why)toast(q.name+' can’t go right now. '+why);else{startPass(q);toast(q.name+', your pass has started.')}
+    save();all();
+  }else if(T){S.queue.splice(i,1);save();all()}
+};
+$('outList').onclick=e=>{
+  const b=e.target.closest('.ret');if(!b)return;
+  const o=S.out.splice(+b.dataset.i,1)[0];
+  addLog({name:o.name,dest:o.dest,start:o.start,end:Date.now(),p:o.p,pid:o.pid,ex:!!o.ex});
+  toast('Welcome back, '+o.name+'!');promote();save();all();
+};
+$('grid').onclick=e=>{
+  const b=e.target.closest('.stu');if(!b||b.disabled)return;
+  const lp=live();if(!lp)return;
+  picked=lp.students[+b.dataset.i];pickedP=lp;pendingEx=null;
+  $('mName').textContent=picked+' is going to…';
+  $('dests').innerHTML=D.map(d=>`<button class="dest" data-d="${d[0]}"><span>${d[1]}</span>${d[0]}</button>`).join('');
+  $('exBtn').style.display='none';
+  $('modal').classList.add('on');
+};
+$('dests').onclick=e=>{
+  const b=e.target.closest('.dest');if(!b)return;
+  const lp=live();
+  if(!lp||!pickedP||lp.id!==pickedP.id){toast('The class period changed. Please try again.');$('modal').classList.remove('on');all();return}
+  const en={name:picked,dest:b.dataset.d,pid:lp.id,p:lp.name};
+  const why=blockReason(en);
+  if(why){toast(why);if(!timeReason(lp.id)){pendingEx=en;$('exBtn').style.display='block'}return}
+  enqueueOrStart(en);save();$('modal').classList.remove('on');all();
+};
+$('exBtn').onclick=()=>{
+  const en=pendingEx;if(!en)return;
+  const go=()=>{
+    const lp=live();if(!lp||lp.id!==en.pid){toast('The class period changed.');return}
+    const k=bkey(en.pid,en.name);S.bonus[k]=(S.bonus[k]||0)+1;en.ex=true;
+    enqueueOrStart(en);$('modal').classList.remove('on');save();all();
+  };
+  if(T)go();else{$('modal').classList.remove('on');afterLogin=go;openLock()}
+};
+$('lCancel').onclick=()=>{afterLogin=null;$('lock').classList.remove('on')};
+$('pstart').onchange=e=>{P().start=e.target.value;save();all()};
+$('startBlock').onchange=e=>{S.startBlock=Math.min(30,Math.max(0,Math.floor(+e.target.value||0)));e.target.value=S.startBlock;save();all()};
+
+const loaded={};
+function loadScript(u){return loaded[u]||(loaded[u]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=()=>rej(new Error('load'));document.head.appendChild(s)}))}
+const CDN='https://cdnjs.cloudflare.com/ajax/libs/',XLSXU=CDN+'xlsx/0.18.5/xlsx.full.min.js',PDFJS=CDN+'pdf.js/3.11.174/pdf.min.js',PDFW=CDN+'pdf.js/3.11.174/pdf.worker.min.js';
+function parseCSV(t){return t.split(/\r?\n/).map(l=>{const c=[];let s='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'){if(l[i+1]==='"'){s+='"';i++}else q=false}else s+=ch}else if(ch==='"')q=true;else if(ch===','||ch==='\t'||ch===';'){c.push(s);s=''}else s+=ch}c.push(s);return c})}
+function namesFromRows(rows){
+  rows=rows.map(r=>r.map(c=>String(c==null?'':c).trim())).filter(r=>r.some(Boolean));
+  if(!rows.length)return [];
+  const h=rows[0].map(c=>c.toLowerCase());
+  const fi=h.findIndex(c=>/first/.test(c)),li=h.findIndex(c=>/last|surname/.test(c)),ni=h.findIndex(c=>/name|student/.test(c));
+  let out;
+  if(fi>=0&&li>=0)out=rows.slice(1).map(r=>(r[fi]+' '+r[li]).trim());
+  else if(ni>=0)out=rows.slice(1).map(r=>r[ni]);
+  else out=rows.map(r=>r.find(Boolean));
+  return out.filter(x=>x&&/[a-z]/i.test(x));
+}
+async function importFile(f){
+  const ext=f.name.split('.').pop().toLowerCase();let names=[];
+  try{
+    if(ext==='pdf'){
+      await loadScript(PDFJS);pdfjsLib.GlobalWorkerOptions.workerSrc=PDFW;
+      const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+      for(let p=1;p<=pdf.numPages;p++){
+        const c=await (await pdf.getPage(p)).getTextContent(),rows={};
+        c.items.forEach(it=>{const y=Math.round(it.transform[5]);(rows[y]=rows[y]||[]).push(it)});
+        Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>{
+          const l=rows[y].sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(' ').replace(/\s+/g,' ').trim().replace(/^\d+[.)\s]+/,'');
+          if(l.length>1&&l.length<45&&/[a-z]/i.test(l)&&!/^(page|period|roster|class|teacher|name|student|date)\b/i.test(l))names.push(l);
+        });
+      }
+    }else if(ext==='xlsx'||ext==='xls'){
+      await loadScript(XLSXU);
+      const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+      names=namesFromRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1}));
+    }else names=namesFromRows(parseCSV(await f.text()));
+  }catch(e){toast('Couldn’t read that file. Try a CSV, Excel file or PDF with one name per row.');return}
+  if(!names.length){toast('Couldn’t find any names in that file.');return}
+  const cur=$('names').value.split('\n').map(s=>s.trim()).filter(Boolean),seen=new Set(cur);
+  names.forEach(n=>{n=n.replace(/\s+/g,' ').trim();if(n&&!seen.has(n)){seen.add(n);cur.push(n)}});
+  $('names').value=cur.join('\n');
+  toast('Found '+names.length+' names. Review them, then tap Save roster.');
+}
+$('impBtn').onclick=()=>$('impFile').click();
+$('impFile').onchange=e=>{const f=e.target.files[0];if(f)importFile(f);e.target.value=''};
+
+const HEAD=['Date','Student','Period','Where','Out','Back','Minutes','Exception'];
+function logRows(){return [...S.log].sort((a,b)=>a.start-b.start).map(l=>[ymd(l.start),l.name,l.p||'',l.dest,clock(l.start),clock(l.end),String(Math.round((l.end-l.start)/60000)),l.ex?'Yes':''])}
+function makePDF(title,lines){
+  const per=60,pages=[];for(let i=0;i<lines.length;i+=per)pages.push(lines.slice(i,i+per));
+  if(!pages.length)pages.push(['(no entries)']);
+  const q=s=>String(s).replace(/[^\x20-\x7e]/g,'?').replace(/([\\()])/g,'\\$1');
+  const objs=[];const add=s=>{objs.push(s);return objs.length};
+  add('<</Type/Catalog/Pages 2 0 R>>');add('');add('<</Type/Font/Subtype/Type1/BaseFont/Courier>>');
+  const kids=[];
+  pages.forEach((pl,pi)=>{
+    const body='BT /F1 9 Tf 40 752 Td 12 TL ('+q(title)+' - page '+(pi+1)+' of '+pages.length+') Tj T* T* '+pl.map(l=>'('+q(l)+') Tj T*').join(' ')+' ET';
+    const c=add('<</Length '+body.length+'>>\nstream\n'+body+'\nendstream');
+    kids.push(add('<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Resources<</Font<</F1 3 0 R>>>>/Contents '+c+' 0 R>>')+' 0 R');
+  });
+  objs[1]='<</Type/Pages/Count '+pages.length+'/Kids['+kids.join(' ')+']>>';
+  let out='%PDF-1.4\n';const off=[];
+  objs.forEach((o,i)=>{off.push(out.length);out+=(i+1)+' 0 obj\n'+o+'\nendobj\n'});
+  const x=out.length;
+  out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<</Size '+(objs.length+1)+'/Root 1 0 R>>\nstartxref\n'+x+'\n%%EOF';
+  return new Blob([out],{type:'application/pdf'});
+}
+async function exportLog(kind){
+  let dl=null;try{dl=window.claude&&await claude.use('downloads')}catch(e){}
+  if(!dl){toast('Exporting isn’t available here.');return}
+  const rows=logRows(),stamp=ymd(Date.now());
+  try{
+    if(kind==='pdf'){
+      const w=[10,22,14,9,8,8,7,9],pad=(s,n)=>String(s).slice(0,n).padEnd(n);
+      const lines=[HEAD.map((h,i)=>pad(h,w[i])).join(' '),'-'.repeat(w.reduce((a,b)=>a+b+1,-1))].concat(rows.map(r=>r.map((c,i)=>pad(c,w[i])).join(' ')));
+      await dl.save({filename:'hall-pass-log-'+stamp+'.pdf',data:makePDF('Hall Pass Log',lines)});
+    }else{
+      let data=null,ext='xlsx';
+      try{await loadScript(XLSXU);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([HEAD,...rows]),'Hall pass log');data=XLSX.write(wb,{type:'array',bookType:'xlsx'})}
+      catch(e){ext='csv';data=[HEAD,...rows].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')}
+      await dl.save({filename:'hall-pass-log-'+stamp+'.'+ext,data});
+    }
+  }catch(e){if(!e||e.code!=='declined')toast('Couldn’t export the file.')}
+}
+$('expX').onclick=()=>exportLog('xlsx');
+$('expP').onclick=()=>exportLog('pdf');
+
+if(S.qStart&&!S.terms.some(t=>t.start)){S.terms[0].start=ymd(S.qStart);S.qStart=0;save()}
+
+var DLG=null,_lv=null;
+function lim(d){return d==='ALL'?(S.limit||0):((S.limits||{})[d]||0)}
+function usedT(pid,n,d){
+  const pn=(S.periods.find(p=>p.id===pid)||{}).name,q=qStartMs();
+  return S.log.concat(S.out).filter(x=>x.name===n&&x.start>=q&&(d==='ALL'||x.dest===d)&&(x.pid===pid||(x.pid==null&&x.p===pn))).length;
+}
+function allowedT(pid,n,d){return Math.max(0,lim(d)+(S.bonus[bkey(pid,n)+'|'+d]||0))}
+function leftT(pid,n,d){return Math.max(0,allowedT(pid,n,d)-usedT(pid,n,d))}
+function used(pid,n){return usedT(pid,n,'ALL')}
+function blockInfo(en){
+  const t=timeReason(en.pid);if(t)return {kind:'time',msg:t};
+  for(const d of [en.dest,'ALL']){
+    if(lim(d)>0&&leftT(en.pid,en.name,d)<=0)return {kind:'limit',dest:d,msg:en.name+' is out of '+(d==='ALL'?'':d+' ')+'passes for this 9 weeks.'};
+  }
+  return null;
+}
+function blockReason(en){const b=blockInfo(en);return b?b.msg:''}
+function warnInfo(en){
+  if(!S.warnLeft)return null;
+  for(const d of [en.dest,'ALL']){if(lim(d)>0){const l=leftT(en.pid,en.name,d);if(l>0&&l<=S.warnLeft)return {dest:d,left:l}}}
+  return null;
+}
+function cap(){return S.maxOut>0?S.maxOut:Infinity}
+function enqueueOrStart(en){
+  if(S.out.length>=cap()||S.queue.length){S.queue.push(en);toast(en.name+' is #'+S.queue.length+' in line.')}
+  else{startPass(en);toast('Signed out. Have a good trip!')}
+}
+function promote(){
+  let w;
+  while(S.queue.length&&(w=blockReason(S.queue[0]))){const n=S.queue.shift();toast(n.name+' was removed from the line. '+w)}
+  if(S.queue.length&&S.out.length<cap())toast(S.queue[0].name+', it’s your turn. Tap Start Pass.');
+}
+function goPass(en){
+  const lp=live();if(!lp||lp.id!==en.pid){toast('The class period changed.');all();return}
+  enqueueOrStart(en);save();$('modal').classList.remove('on');all();
+}
+function approveEx(en){
+  const go=()=>{
+    const lp=live();if(!lp||lp.id!==en.pid){toast('The class period changed.');return}
+    let i;for(let n=0;n<2&&(i=blockInfo(en))&&i.kind==='limit';n++){const k=bkey(en.pid,en.name)+'|'+i.dest;S.bonus[k]=(S.bonus[k]||0)+1}
+    en.ex=true;enqueueOrStart(en);save();all();
+  };
+  if(T)go();else{afterLogin=go;openLock()}
+}
+function askDlg(title,text,okLabel,onOk){
+  $('dTitle').textContent=title;$('dText').textContent=text;
+  $('dOk').textContent=okLabel;DLG=onOk;$('dlg').classList.add('on');
+}
+$('dOk').onclick=()=>{$('dlg').classList.remove('on');const f=DLG;DLG=null;if(f)f()};
+$('dNo').onclick=()=>{$('dlg').classList.remove('on');DLG=null};
+$('dests').onclick=e=>{
+  const b=e.target.closest('.dest');if(!b)return;
+  const lp=live();
+  if(!lp||!pickedP||lp.id!==pickedP.id){toast('The class period changed. Please try again.');$('modal').classList.remove('on');all();return}
+  const en={name:picked,dest:b.dataset.d,pid:lp.id,p:lp.name};
+  const info=blockInfo(en);
+  if(info&&info.kind==='time'){toast(info.msg);return}
+  $('modal').classList.remove('on');
+  if(info){askDlg('Out of passes',info.msg+' A teacher can approve an exception.','Teacher approval',()=>approveEx(en));return}
+  const w=warnInfo(en);
+  if(w){askDlg('Heads up',en.name+', this will use '+(w.left===1?'your last ':'one of your last '+w.left+' ')+(w.dest==='ALL'?'':w.dest+' ')+(w.left===1?'pass':'passes')+' for this 9 weeks.','Use it',()=>goPass(en));return}
+  goPass(en);
+};
+function renderQueue(){
+  const el=$('queueList');
+  if(!S.queue.length){el.innerHTML='<div class="empty">No one waiting.</div>';return}
+  const slots=cap()-S.out.length;
+  el.innerHTML=S.queue.map((q,i)=>{
+    const ready=i<slots;
+    return `<div class="out ${ready?'warn':''}"><div><b>${i+1}. ${icon(q.dest)} ${esc(q.name)}</b><small>${ready?'Your turn! Tap Start Pass.':esc(q.dest)+(q.p?' · '+esc(q.p):'')+(q.ex?' · exception':'')}</small></div>${ready?`<button class="ret" style="margin-left:auto" data-a="go" data-i="${i}">▶ Start Pass</button>`:''}${T?`<button class="btn g" style="${ready?'':'margin-left:auto'}" data-a="rm" data-i="${i}">Remove</button>`:''}</div>`;
+  }).join('');
+}
+$('queueList').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;
+  if(b.dataset.a==='go'){
+    const q=S.queue[i];if(!q||i>=cap()-S.out.length)return;
+    const why=blockReason(q);S.queue.splice(i,1);
+    if(why)toast(q.name+' can’t go right now. '+why);else{startPass(q);toast(q.name+', your pass has started.')}
+    save();all();
+  }else if(T){S.queue.splice(i,1);save();all()}
+};
+function renderGrid(){
+  const g=$('grid'),lp=live();
+  $('gridTitle').textContent=lp?'Tap your name · '+lp.name:'Tap your name';
+  if(!lp){g.innerHTML='<div class="empty" style="grid-column:1/-1">No class is in session right now.</div>';return}
+  if(!lp.students.length){g.innerHTML='<div class="empty" style="grid-column:1/-1">Teacher: tap the lock button at the top to log in and add your students.</div>';return}
+  const ds=[...(lim('ALL')>0?['ALL']:[]),...D.map(d=>d[0]).filter(t=>lim(t)>0)];
+  g.innerHTML=lp.students.map((n,i)=>{
+    const busy=S.out.some(o=>o.name===n&&o.pid===lp.id)||S.queue.some(o=>o.name===n&&o.pid===lp.id);
+    
+    return `<button class="stu" data-i="${i}" ${busy?'disabled':''}>${esc(n)}</button>`;
+  }).join('');
+}
+function renderPasses(){
+  $('passTitle').textContent='Passes · '+P().name;
+  const ds=[...(lim('ALL')>0?['ALL']:[]),...D.map(d=>d[0]).filter(t=>lim(t)>0)];
+  const cols=ds.length?ds:['ALL'];
+  $('passHead').innerHTML='<tr><th>Student</th>'+cols.map(d=>`<th>${d==='ALL'?'All passes':icon(d)+' '+esc(d)}</th>`).join('')+'</tr>';
+  const rows=P().students.map(n=>'<tr><td><b>'+esc(n)+'</b></td>'+cols.map(d=>{
+    const u=usedT(S.cur,n,d);if(!lim(d))return `<td>${u}</td>`;
+    const a=allowedT(S.cur,n,d),k=esc(bkey(S.cur,n)+'|'+d);
+    return `<td style="white-space:nowrap;font-weight:700;color:${u>=a?'var(--bad)':'inherit'}">${u}/${a} <button class="mini" data-k="${k}" data-d="-1">−</button> <button class="mini" data-k="${k}" data-d="1">+</button></td>`;
+  }).join('')+'</tr>').join('');
+  $('passBody').innerHTML=rows;$('passEmpty').style.display=rows?'none':'block';
+  $('passNote').textContent=(qStartMs()?'Counting since '+day(qStartMs())+(termName()?' ('+termName()+')':''):'Counting all time')+' · used/allowed · − and + take back or give an extra pass';
+}
+function renderLimits(){
+  $('limitGrid').innerHTML='<p style="margin:0 0 6px;color:var(--mut)">Passes each student may use per 9 weeks (0 = no limit)</p>'+['ALL',...D.map(d=>d[0])].map(d=>`<label class="set"><span style="min-width:170px">${d==='ALL'?'All passes combined':icon(d)+' '+d}</span><input type="number" min="0" max="99" data-l="${d}" value="${lim(d)}"></label>`).join('');
+}
+$('limitGrid').onchange=e=>{
+  const d=e.target.dataset.l;if(!d)return;
+  const v=Math.min(99,Math.max(0,Math.floor(+e.target.value||0)));e.target.value=v;
+  if(d==='ALL')S.limit=v;else S.limits[d]=v;save();all();
+};
+$('maxOut').onchange=e=>{S.maxOut=Math.min(20,Math.max(0,Math.floor(+e.target.value||0)));e.target.value=S.maxOut;save();all()};
+$('warnLeft').onchange=e=>{S.warnLeft=Math.min(10,Math.max(0,Math.floor(+e.target.value||0)));e.target.value=S.warnLeft;save()};
+
+function colDefs(){return [
+  ['date','Date',l=>ymd(l.start)],['student','Student',l=>l.name],['period','Period',l=>l.p||''],['where','Where',l=>l.dest],
+  ['out','Out',l=>clock(l.start)],['back','Back',l=>clock(l.end)],['mins','Minutes',l=>String(Math.round((l.end-l.start)/60000))],['ex','Exception',l=>l.ex?'Yes':'']
+]}
+function lv(){
+  if(!_lv){
+    let s=null;try{s=JSON.parse(localStorage.getItem('hp-logview'))}catch(e){}
+    _lv=Object.assign({from:'',to:'',period:'all',where:'all'},s||{});
+    const d={};colDefs().forEach(c=>{d[c[0]]=true});_lv.cols=Object.assign(d,(s&&s.cols)||{});
+  }
+  return _lv;
+}
+function saveLv(){try{localStorage.setItem('hp-logview',JSON.stringify(lv()))}catch(e){}}
+function logFiltered(){
+  const v=lv(),f=v.from?new Date(v.from+'T00:00:00').getTime():0,t=v.to?new Date(v.to+'T23:59:59').getTime():Infinity;
+  const pn=(S.periods.find(p=>String(p.id)===v.period)||{}).name;
+  return S.log.filter(l=>l.start>=f&&l.start<=t&&(v.period==='all'||String(l.pid)===v.period||(l.pid==null&&l.p===pn))&&(v.where==='all'||l.dest===v.where)).sort((a,b)=>b.start-a.start);
+}
+function renderLog(){
+  const cs=colDefs().filter(c=>lv().cols[c[0]]),rows=logFiltered();
+  $('logHead').innerHTML='<tr>'+cs.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
+  $('logEmpty').style.display=rows.length?'none':'block';
+  $('logEmpty').textContent=S.log.length?'No entries match these filters.':'No sign-outs yet.';
+  $('logBody').innerHTML=rows.slice(0,500).map(l=>'<tr>'+cs.map(c=>`<td>${c[0]==='where'?icon(l.dest)+' ':''}${esc(c[2](l))}</td>`).join('')+'</tr>').join('');
+  $('logNote').textContent=rows.length+' entr'+(rows.length===1?'y':'ies')+(rows.length>500?' (showing the newest 500; exports include all)':'')+' · exports use these filters and columns';
+}
+function renderLogCtl(){
+  const v=lv();
+  const per='<option value="all">All periods</option>'+S.periods.map(p=>`<option value="${p.id}" ${String(p.id)===v.period?'selected':''}>${esc(p.name)}</option>`).join('');
+  const wh='<option value="all">All types</option>'+D.map(d=>`<option ${d[0]===v.where?'selected':''}>${d[0]}</option>`).join('');
+  $('logCtl').innerHTML=`<div class="row" style="margin-top:0"><label class="set" style="margin:0">From <input class="fi" type="date" data-f="from" value="${v.from}"></label><label class="set" style="margin:0">To <input class="fi" type="date" data-f="to" value="${v.to}"></label><label class="set" style="margin:0">Period <select class="fi" data-f="period">${per}</select></label><label class="set" style="margin:0">Where <select class="fi" data-f="where">${wh}</select></label></div><div class="row"><button class="mini" data-q="today">Today</button><button class="mini" data-q="week">Last 7 days</button><button class="mini" data-q="term">This 9 weeks</button><button class="mini" data-q="all">All dates</button></div><div class="row" style="margin-bottom:0"><b>Show:</b>${colDefs().map(c=>`<label class="set" style="margin:0"><input type="checkbox" data-c="${c[0]}" ${v.cols[c[0]]?'checked':''}> ${c[1]}</label>`).join('')}</div>`;
+}
+$('logCtl').onchange=e=>{
+  const t=e.target;
+  if(t.dataset.f)lv()[t.dataset.f]=t.value;
+  else if(t.dataset.c){lv().cols[t.dataset.c]=t.checked;if(!Object.values(lv().cols).some(Boolean)){lv().cols[t.dataset.c]=true;t.checked=true}}
+  saveLv();renderLog();
+};
+$('logCtl').onclick=e=>{
+  const b=e.target.closest('[data-q]');if(!b)return;
+  const v=lv(),q=b.dataset.q,n=Date.now();
+  if(q==='all'){v.from='';v.to=''}else if(q==='today'){v.from=v.to=ymd(n)}else if(q==='week'){v.from=ymd(n-6*864e5);v.to=ymd(n)}else{const s=qStartMs();v.from=s?ymd(s):'';v.to=''}
+  saveLv();renderLogCtl();renderLog();
+};
+function exportTable(){
+  const cs=colDefs().filter(c=>lv().cols[c[0]]);
+  return {keys:cs.map(c=>c[0]),head:cs.map(c=>c[1]),rows:logFiltered().reverse().map(l=>cs.map(c=>c[2](l)))};
+}
+function filterSummary(){
+  const v=lv(),pn=(S.periods.find(p=>String(p.id)===v.period)||{}).name;
+  return (v.from||v.to?(v.from||'start')+' to '+(v.to||'now'):'all dates')+(pn?', '+pn:'')+(v.where!=='all'?', '+v.where:'');
+}
+async function exportLog(kind){
+  let dl=null;try{dl=window.claude&&await claude.use('downloads')}catch(e){}
+  if(!dl){toast('Exporting isn’t available here.');return}
+  const t=exportTable(),stamp=ymd(Date.now());
+  try{
+    if(kind==='pdf'){
+      const W={date:10,student:22,period:14,where:9,out:8,back:8,mins:7,ex:9},w=t.keys.map(k=>W[k]),pad=(s,n)=>String(s).slice(0,n).padEnd(n);
+      const lines=[t.head.map((h,i)=>pad(h,w[i])).join(' '),'-'.repeat(w.reduce((a,b)=>a+b+1,-1))].concat(t.rows.map(r=>r.map((c,i)=>pad(c,w[i])).join(' ')));
+      await dl.save({filename:'hall-pass-log-'+stamp+'.pdf',data:makePDF('Hall Pass Log ('+filterSummary()+')',lines)});
+    }else{
+      let data=null,ext='xlsx';
+      try{await loadScript(XLSXU);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([t.head,...t.rows]),'Hall pass log');data=XLSX.write(wb,{type:'array',bookType:'xlsx'})}
+      catch(e){ext='csv';data=[t.head,...t.rows].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')}
+      await dl.save({filename:'hall-pass-log-'+stamp+'.'+ext,data});
+    }
+  }catch(e){if(!e||e.code!=='declined')toast('Couldn’t export the file.')}
+}
+
+if(!S.mig2){
+  S.mig2=true;
+  if(S.oneBath===false)S.maxOut=0;
+  if(S.limit>0&&S.bathOnly){S.limits.Bathroom=S.limit;S.limit=0}
+  save();
+}
+renderRoster();all();
+$('sync').textContent=hpConfigured()?'Not syncing · tap to connect':'Saved on this device';
+if(window.claude&&claude.use)claude.use('db').then(initDb).catch(()=>{});
+</script>
+</body></html>

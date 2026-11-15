@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only the teacher sync account can read or write anything.
+    // Replace the email below with the one you created in Firebase Authentication.
+    match /{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.token.email == 'YOUR_TEACHER_EMAIL@example.com';
+    }
+  }
+}
