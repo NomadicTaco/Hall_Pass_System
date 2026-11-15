@@ -3,6 +3,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2f5bea">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Hall Pass</title>
 <style>
 :root{--bg:#f3f5fa;--card:#fff;--ink:#1b2333;--mut:#667089;--line:#dde2ee;--pri:#2f5bea;--pi:#fff;--ok:#1f9d63;--warn:#d98a00;--bad:#d63b3b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -10,6 +14,7 @@
 :root[data-theme="dark"]{--bg:#0f131d;--card:#1a2030;--ink:#eef1f8;--mut:#9aa4bd;--line:#2b3348;--pri:#6b8cff;--pi:#0f131d;--ok:#3cc487;--warn:#f0a928;--bad:#ff6b6b;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
+body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}input,textarea,select{-webkit-user-select:text;user-select:text}
 body{background:var(--bg);color:var(--ink);font:18px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 header{display:flex;align-items:center;gap:16px;padding:14px 20px;flex-wrap:wrap}
@@ -104,7 +109,7 @@ textarea{width:100%;min-height:220px;font:inherit;padding:12px;border-radius:12p
         <label class="set">Warn after <input type="number" id="warn" min="1" max="60"> minutes</label>
         <label class="set">No passes in the last <input type="number" id="cutoff" min="0" max="30"> minutes of class <small style="color:var(--mut)">0 = off</small></label>
         <label class="set">No passes in the first <input type="number" id="startBlock" min="0" max="30"> minutes of class <small style="color:var(--mut)">0 = off</small></label>
-        <div id="limitGrid"></div><input type="number" id="limit" hidden>
+        <div id="typesBox"></div><div id="limitGrid"></div><input type="number" id="limit" hidden>
         <div id="terms"></div><input type="date" id="qdate" hidden>
         <input type="checkbox" id="bathOnly" hidden>
         <button id="newQ" hidden></button>
@@ -126,11 +131,10 @@ textarea{width:100%;min-height:220px;font:inherit;padding:12px;border-radius:12p
 <div class="modal" id="lock"><div class="sheet"><h3 id="lTitle"></h3><input class="lin" type="password" id="lPass" placeholder="Passcode" autocomplete="off"><input class="lin" type="password" id="lPass2" placeholder="Confirm passcode" autocomplete="off"><p id="lMsg" style="color:var(--bad);min-height:1.4em;margin:0 0 8px;font-weight:600"></p><div class="row" style="margin:0"><button class="btn" id="lGo">Enter</button><button class="btn g" id="lCancel">Cancel</button></div><p style="color:var(--mut);font-size:15px;margin:12px 0 0">Forgot it? Ask Claude to reset it for you.</p></div></div>
 <div class="modal" id="dlg"><div class="sheet"><h3 id="dTitle"></h3><p id="dText" style="font-size:20px;margin:0 0 18px"></p><div class="row" style="margin:0"><button class="btn" id="dOk"></button><button class="btn g" id="dNo">Cancel</button></div></div></div>
 <div class="toast" id="toast"></div>
+<script src="config.js"></script>
 <script>
-/* ===== SYNC SETUP: paste your Firebase web app config here (see README.md) ===== */
-const FIREBASE_CONFIG={apiKey:"AIzaSyASQWiikntmdB-3nZgsJkw5IYmyMBpeQZI",authDomain:"hall-pass-system-be99a.firebaseapp.com",projectId:"hall-pass-system-be99a",appId:"1:381714928729:web:7c4ea85531bf10af6e0d48"};
-/* ================================================================================ */
-const hpConfigured=()=>!!(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.projectId);
+const hpCfg=()=>(typeof FIREBASE_CONFIG!=='undefined'&&FIREBASE_CONFIG)||{};
+const hpConfigured=()=>!!(hpCfg().apiKey&&hpCfg().projectId);
 let hpDbP=null,hpLive=false;
 
 /* Wraps Firebase Firestore in the small interface the app uses. */
@@ -177,7 +181,7 @@ function hpOverlay(msg){
 async function hpConnect(){
   const B='https://www.gstatic.com/firebasejs/10.12.2/';
   const [app,fs,au]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-firestore.js'),import(B+'firebase-auth.js')]);
-  const a=app.initializeApp(FIREBASE_CONFIG),auth=au.getAuth(a);
+  const a=app.initializeApp(hpCfg()),auth=au.getAuth(a);
   let user=await new Promise(r=>{const un=au.onAuthStateChanged(auth,x=>{un();r(x)})});
   let msg='';
   while(!user){
@@ -226,7 +230,12 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 const clock=t=>new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
 const day=t=>new Date(t).toLocaleDateString([],{month:'short',day:'numeric'});
-const icon=d=>(D.find(x=>x[0]===d)||D[5])[1];
+const icon=d=>(D.find(x=>x[0]===d)||['','🚶'])[1];
+function syncTypes(){
+  if(!Array.isArray(S.types)||!S.types.length)S.types=[{n:'Bathroom',i:'🚻'},{n:'Water',i:'💧'},{n:'Nurse',i:'🩺'},{n:'Office',i:'🏢'},{n:'Locker',i:'🔒'},{n:'Other',i:'🚶'}];
+  D.length=0;S.types.forEach(t=>D.push([t.n,t.i]));
+}
+syncTypes();
 let picked=null,tt;
 
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',2600)}
@@ -254,7 +263,7 @@ function renderLog(){
   $('logBody').innerHTML=rows.map(l=>`<tr><td><b>${esc(l.name)}</b></td><td>${esc(l.p||'')}</td><td>${icon(l.dest)} ${esc(l.dest)}</td><td>${day(l.start)}</td><td>${clock(l.start)}</td><td>${clock(l.end)}</td><td>${mmss(l.end-l.start)}</td></tr>`).join('');
 }
 function renderRoster(){
-  $('names').value=P().students.join('\n');$('pname').value=P().name;$('pend').value=P().end||'';$('pstart').value=P().start||'';$('one').checked=S.oneBath;$('warn').value=S.warn;$('limit').value=S.limit;$('cutoff').value=S.cutoff;$('lockMin').value=S.lockMin;$('startBlock').value=S.startBlock;renderTerms();$('maxOut').value=S.maxOut;$('warnLeft').value=S.warnLeft;renderLimits();renderLogCtl();$('bathOnly').checked=S.bathOnly;$('qdate').value=S.qStart?ymd(S.qStart):'';
+  $('names').value=P().students.join('\n');$('pname').value=P().name;$('pend').value=P().end||'';$('pstart').value=P().start||'';$('one').checked=S.oneBath;$('warn').value=S.warn;$('limit').value=S.limit;$('cutoff').value=S.cutoff;$('lockMin').value=S.lockMin;$('startBlock').value=S.startBlock;renderTerms();$('maxOut').value=S.maxOut;$('warnLeft').value=S.warnLeft;renderTypes();renderLimits();renderLogCtl();$('bathOnly').checked=S.bathOnly;$('qdate').value=S.qStart?ymd(S.qStart):'';
 }
 function renderBar(){
   $('pbar').innerHTML=(T?S.periods:S.periods.filter(p=>p.id===S.cur)).map(p=>`<button class="pc ${(T?p.id===S.cur:true)?'on':''}" data-id="${p.id}">${esc(p.name)}${T&&(live()||{}).id===p.id?' ●':''}</button>`).join('')+(T?'<button class="pc add" id="addP">＋ Add period</button>':'');
@@ -321,7 +330,7 @@ function initDb(db){
     const v=snap.data().v;
     if(v!==lastV){
       lastV=v;
-      try{const cur=S.cur;Object.assign(S,JSON.parse(v));S.cur=S.periods.some(p=>p.id===cur)?cur:S.periods[0].id;renderRoster();all()}catch(e){}
+      try{const cur=S.cur;Object.assign(S,JSON.parse(v));syncTypes();S.cur=S.periods.some(p=>p.id===cur)?cur:S.periods[0].id;renderRoster();all()}catch(e){}
     }
     $('sync').textContent='● Live sync on';
   },()=>{$('sync').textContent='Saved on this device'});
@@ -830,6 +839,32 @@ async function exportLog(kind){
     }
   }catch(e){if(!e||e.code!=='declined')toast('Couldn’t export the file.')}
 }
+
+function cleanIcon(v){return Array.from(String(v||'').replace(/[<>&"]/g,'').trim()).slice(0,2).join('')||'•'}
+function renderTypes(){
+  $('typesBox').innerHTML='<p style="margin:0 0 6px;color:var(--mut)">Pass types students can choose</p>'+S.types.map((t,i)=>`<div class="set" style="margin:6px 0"><input class="fi" style="width:70px;text-align:center;font-size:22px" data-ti="${i}" maxlength="4" value="${esc(t.i)}"><b style="flex:1">${esc(t.n)}</b><button class="mini" data-rm="${i}">Remove</button></div>`).join('')+'<div class="set" style="margin:10px 0 18px"><input class="fi" id="newTI" style="width:70px;text-align:center;font-size:22px" maxlength="4" placeholder="🙂"><input class="fi" id="newTN" style="flex:1;min-width:0" maxlength="20" placeholder="New pass type (e.g. Library)"><button class="btn" id="addType">Add</button></div>';
+}
+let armT=-1;
+$('typesBox').onchange=e=>{
+  const i=e.target.dataset.ti;if(i==null)return;
+  S.types[+i].i=cleanIcon(e.target.value);syncTypes();save();all();renderTypes();
+};
+$('typesBox').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.id==='addType'){
+    const n=$('newTN').value.trim(),ic=cleanIcon($('newTI').value);
+    if(!/^[\p{L}\p{N} \-'.()\/]{1,20}$/u.test(n)){toast('Use 1 to 20 letters, numbers or spaces for the name.');return}
+    if(n.toUpperCase()==='ALL'||S.types.some(t=>t.n.toLowerCase()===n.toLowerCase())){toast('That pass type already exists.');return}
+    S.types.push({n,i:ic});syncTypes();save();all();renderRoster();toast(n+' added.');return;
+  }
+  if(b.dataset.rm!=null){
+    const i=+b.dataset.rm;
+    if(S.types.length<2){toast('You need at least one pass type.');return}
+    if(armT!==i){armT=i;b.textContent='Tap again';setTimeout(()=>{armT=-1;renderTypes()},3000);return}
+    const n=S.types[i].n;S.types.splice(i,1);delete S.limits[n];armT=-1;
+    syncTypes();save();all();renderRoster();toast(n+' removed.');
+  }
+};
 
 if(!S.mig2){
   S.mig2=true;
