@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hall Pass Manager</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f27;--mu:#667085;--bd:#dde1e8;--ac:#2f5fd0;--ok:#1f8a4c;--wa:#b7791f;--er:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--card:#1d222a;--tx:#eceff4;--mu:#9aa4b2;--bd:#303743;--ac:#6b93f0;--ok:#4cc17f;--wa:#e0aa4a;--er:#ef7b6e}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx)}
+main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0}h2{font-size:16px;margin:0 0 10px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button{margin-right:6px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px}
+button,select,input{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:7px;padding:6px 10px}
+button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button.d{color:var(--er)}button.on{background:var(--ac);color:#fff}
+input[type=number]{width:70px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.pb{padding:14px;text-align:left}.pb b{display:block;font-size:16px}.pb span{color:var(--mu);font-size:13px}
+.pb.full{border-color:var(--er)}.pb.last{border-color:var(--wa)}
+.st{padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:14px}
+.st.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}.st.no{background:color-mix(in srgb,var(--er) 15%,transparent);color:var(--er)}
+.mu{color:var(--mu);font-size:13px}.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left}
+td.over{color:var(--er);font-weight:600}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
+#modal .box{background:var(--card);border-radius:12px;padding:20px;max-width:420px;width:100%;border-top:5px solid var(--wa)}
+#modal .box.bad{border-top-color:var(--er)}
+button,select,label{touch-action:manipulation;-webkit-tap-highlight-color:transparent}button{user-select:none;-webkit-user-select:none}label{display:inline-flex;align-items:center;gap:6px}.pb.on span{color:#fff}.top{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;padding:8px 0}body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}@media (min-width:700px){body{font-size:17px}main{max-width:1100px;padding:20px 28px}h1{font-size:24px}h2{font-size:19px}button,select,input{min-height:50px;font-size:17px;padding:8px 16px;border-radius:10px}input[type=number]{width:96px}input[type=checkbox]{min-height:0;width:26px;height:26px;padding:0}label{min-height:46px;gap:8px}.tabs button{padding:10px 26px;font-size:18px}.grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.pb{min-height:100px;padding:18px}.pb b{font-size:21px}.pb span{font-size:15px}.card{padding:22px}.st{font-size:17px;padding:12px 18px}td,th{padding:12px;font-size:16px}.row{gap:12px;margin:8px 0}#modal .box{max-width:540px;padding:30px}#modal .box p{font-size:18px}#modal .row button{min-width:140px}}</style></head><body><main>
+<div class="top"><h1>Hall Pass Manager</h1><div class="tabs"><button id="t-s" onclick="tab('s')">Student</button><button id="t-t" onclick="tab('t')" hidden>Teacher</button><button id="t-r" onclick="tab('r')" hidden>Report</button><button id="t-l" onclick="lk()">🔒 Teacher login</button></div></div>
+<div id="app"></div><div id="sy" class="mu" style="margin-top:8px"></div></main>
+<div id="modal"><div class="box" id="mb"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const SYNC_URL=""; // optional: paste your sync address here instead of using Settings
+const $=s=>document.querySelector(s),pad=n=>String(n).padStart(2,"0");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const tm=t=>{const[a,b]=t.split(":");return+a*60+ +b};
+const fm=m=>{const h=Math.floor(m/60),n=m%60;return((h+11)%12+1)+":"+pad(n)+(h<12?" AM":" PM")};
+const ft=ms=>new Date(ms).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+function def(){const s=new Date();s.setDate(s.getDate()-21);const e=new Date(s);e.setDate(e.getDate()+62);const n=new Date();
+return{p:{start:ymd(s),end:ymd(e)},bs:10,be:10,
+types:[{name:"Restroom",limit:4},{name:"Nurse",limit:2},{name:"Office",limit:2},{name:"Water",limit:3}],
+periods:[{id:"p1",name:"Period 1",start:"08:00",end:"08:50"},{id:"p2",name:"Period 2",start:"09:00",end:"09:50"}],
+students:["Ava Johnson","Ben Carter","Chloe Diaz","Dev Patel"],sp:{"Ava Johnson":"p1","Ben Carter":"p1","Chloe Diaz":"p2","Dev Patel":"p2"},maxOut:2,q:[],auth:null,passes:[],reqs:[],
+sim:{on:true,t:ymd(n)+"T08:25"}}}
+let S;try{S=JSON.parse(localStorage.getItem("hp1"))}catch(e){}S=S||def();S.periods.forEach((p,i)=>p.id=p.id||"p"+(i+1));S.sp=S.sp||{};if(S.maxOut==null)S.maxOut=2;S.q=S.q||[];S.auth=S.auth||null;
+let view="s",me=S.students[0]||"";
+const save=nop=>{try{localStorage.setItem("hp1",JSON.stringify(S))}catch(e){}if(!nop)push()};
+const now=()=>S.sim.on&&S.sim.t?new Date(S.sim.t):new Date();
+const perAt=m=>S.periods.find(p=>tm(p.start)<=m&&m<tm(p.end));
+const mins=d=>d.getHours()*60+d.getMinutes();
+const inRange=ms=>{const k=ymd(new Date(ms));return k>=S.p.start&&k<=S.p.end};
+const used=(st,ty)=>S.passes.filter(p=>p.student===st&&p.type===ty&&inRange(p.out)).length;
+const lim=ty=>(S.types.find(t=>t.name===ty)||{limit:0}).limit;
+const active=st=>S.passes.find(p=>p.student===st&&!p.back);
+const perOf=st=>S.periods.find(p=>p.id===S.sp[st])||S.periods[0];
+const outN=st=>{const id=(perOf(st)||{}).id;return S.passes.filter(p=>!p.back&&(perOf(p.student)||{}).id===id).length};
+const qid=st=>(perOf(st)||{}).id;
+const qlist=id=>S.q.filter(x=>qid(x.student)===id);
+const full=st=>outN(st)>=S.maxOut||qlist(qid(st)).length>0;
+function go(st,ty){if(full(st)){S.q.push({id:Date.now()+Math.random(),student:st,type:ty,t:Date.now()});save();render();
+modal("You’re in line","Everyone’s spots are taken right now. When it’s your turn, tap Start pass to leave.",[["OK"]])}else issue(st,ty)}
+const ready=x=>qlist(qid(x.student)).indexOf(x)<S.maxOut-outN(x.student);
+function leaveQ(id){S.q=S.q.filter(x=>x.id!==id);save();render()}
+function startQ(id){const x=S.q.find(y=>y.id===id);if(!x)return;
+if(active(x.student))return modal("Already out","Return your current pass first.",[["OK"]],1);
+if(!ready(x))return modal("Not your turn yet","Please wait until a spot opens.",[["OK"]]);
+const d=now(),m=mins(d),per=perOf(x.student),k=ymd(d);
+if(k<S.p.start||k>S.p.end||!per||!(tm(per.start)<=m&&m<tm(per.end)))return modal("Class not in session","Passes can only be used during your class period.",[["OK"]],1);
+const a=m-tm(per.start),b=tm(per.end)-m;
+if(a<S.bs||b<S.be)return modal("Passes are closed right now","No passes during the first "+S.bs+" or last "+S.be+" minutes of class.",[["OK"]],1);
+S.q=S.q.filter(y=>y!==x);issue(x.student,x.type)}
+function qv(){const cp=perAt(mins(now()));if(!cp)return"";const ql=qlist(cp.id);if(!ql.length)return"";
+return`<h2 style="margin-top:16px">Line (${ql.length})</h2>${ql.map((x,i)=>`<div class="row"><b>${i+1}. ${esc(x.student)}</b><span class="mu">${esc(x.type)}</span>${ready(x)?(x.student===me?`<b>Your turn!</b><button class="p" onclick="startQ(${x.id})">Start pass</button>`:`<span class="mu">Ready · waiting for them to tap Start</span>`):`<span class="mu">Waiting</span>`}${x.student===me?`<button class="d" onclick="leaveQ(${x.id})">Leave line</button>`:""}</div>`).join("")}`}
+function qt(){return`<div class="card"><h2>Line (${S.q.length})</h2>${S.q.map(x=>`<div class="row"><span><b>${esc(x.student)}</b> · ${esc(x.type)} · ${esc((perOf(x.student)||{name:""}).name)}</span><span class="mu">${ready(x)?"Ready to start":"Waiting"}</span><button class="d" onclick="leaveQ(${x.id})">Remove</button></div>`).join("")||`<span class="mu">Nobody is waiting.</span>`}</div>`}
+function tick(){document.querySelectorAll(".tm").forEach(e=>{const s=Math.max(0,Math.floor((Date.now()-e.dataset.t)/1000));e.textContent=pad(Math.floor(s/60))+":"+pad(s%60)})}
+setInterval(tick,1000);
+let T=false,idle=Date.now(),bad=0,lockUntil=0;
+["pointerdown","keydown"].forEach(e=>addEventListener(e,()=>idle=Date.now()));
+setInterval(()=>{if(T&&Date.now()-idle>6e5){T=false;render()}},15000);
+async function hp(pin,salt){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+":"+pin));return[...new Uint8Array(b)].map(x=>pad(x.toString(16))).join("")}
+const foc=id=>setTimeout(()=>{const e=$(id);e&&e.focus()},60);
+function lk(){if(T){T=false;render()}else if(!S.auth)setPin(1);else login()}
+function login(msg){modal("Teacher login",(msg?`<span style="color:var(--er)">${msg}</span><br>`:"")+`<input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" style="width:100%">`,[["Cancel"],["Unlock",async()=>{
+if(Date.now()<lockUntil)return login("Too many tries. Wait a few seconds.");
+let ok=false;try{ok=await hp($("#pin").value,S.auth.salt)===S.auth.hash}catch(e){return modal("Login unavailable","This browser can’t verify PINs.",[["OK"]],1)}
+if(ok){T=true;bad=0;idle=Date.now();render()}else{if(++bad>=5){lockUntil=Date.now()+3e4;bad=0}login("Incorrect PIN.")}},1]]);foc("#pin")}
+function setPin(first,msg){modal(first?"Set up teacher PIN":"Change teacher PIN",(msg?`<span style="color:var(--er)">${msg}</span><br>`:"")+`<input id="p1" type="password" inputmode="numeric" autocomplete="off" placeholder="New PIN (4 to 12 digits)" style="width:100%;margin-bottom:8px"><input id="p2" type="password" inputmode="numeric" autocomplete="off" placeholder="Confirm PIN" style="width:100%">`,[["Cancel"],["Save PIN",async()=>{
+const a=$("#p1").value,b=$("#p2").value;if(!/^\d{4,12}$/.test(a))return setPin(first,"Use 4 to 12 digits.");if(a!==b)return setPin(first,"The PINs don’t match.");
+try{const salt=crypto.getRandomValues(new Uint32Array(3)).join("-");S.auth={salt,hash:await hp(a,salt)};T=true;idle=Date.now();save();render()}catch(e){modal("Couldn’t save PIN","This browser can’t create a PIN.",[["OK"]],1)}},1]]);foc("#p1")}
+const CF=["p","bs","be","types","periods","students","sp","maxOut","auth"],COL={passes:"passes",reqs:"reqs",q:"queue"};
+try{const q=new URLSearchParams(location.search).get("sync");if(q){localStorage.setItem("hpdb",q);history.replaceState(null,"",location.pathname)}}catch(e){}
+let U=(SYNC_URL||localStorage.getItem("hpdb")||"").trim().replace(/\.json$/i,"").replace(/\/+$/,""),live=false,lastCfg="",last={passes:{},reqs:{},q:{}},chain=Promise.resolve(),pend=0,wseq=0;
+const setSy=t=>{const e=$("#sy");if(e)e.textContent=t};
+const cfgOf=()=>CF.reduce((a,k)=>(a[k]=S[k]===undefined?null:S[k],a),{});
+const key=id=>String(id).replace(/\./g,"_");
+function w(fn){pend++;wseq++;chain=chain.then(fn).catch(()=>setSy("Sync problem: the last change may not have saved")).then(()=>{pend--})}
+const rq=(path,body)=>fetch(U+"/"+path+".json",{method:"PUT",body:JSON.stringify({j:body})}).then(r=>{if(!r.ok)throw 0});
+function push(){if(!live)return;const c=JSON.stringify(cfgOf());
+if(c!==lastCfg){lastCfg=c;w(()=>rq("config",c))}
+for(const k in COL){const cur={};S[k].forEach(x=>cur[key(x.id)]=JSON.stringify(x));
+for(const id in cur)if(last[k][id]!==cur[id])w(()=>rq(COL[k]+"/"+id,cur[id]));
+for(const id in last[k])if(!(id in cur))w(()=>fetch(U+"/"+COL[k]+"/"+id+".json",{method:"DELETE"}).then(r=>{if(!r.ok)throw 0}));
+last[k]=cur}}
+function adopt(k,list){const arr=list.map(x=>JSON.parse(x.j)).sort((a,b)=>a.id-b.id),m={};
+arr.forEach(x=>m[key(x.id)]=JSON.stringify(x));last[k]=m;
+if(JSON.stringify(S[k])!==JSON.stringify(arr)){S[k]=arr;save(1);render()}}
+function adoptCfg(j){const o=JSON.parse(j),t=JSON.stringify(CF.reduce((a,k)=>(a[k]=o[k]===undefined?S[k]:o[k],a),{}));
+if(t===lastCfg)return;lastCfg=t;const n=JSON.parse(t);CF.forEach(k=>{S[k]=n[k]});S.periods.forEach((p,i)=>p.id=p.id||"p"+(i+1));save(1);render()}
+function apply(o){adoptCfg(o.config.j);for(const k in COL)adopt(k,Object.values(o[COL[k]]||{}))}
+async function connect(){if(!U){setSy("This device only. Add a sync address in Teacher › Settings.");return}
+setSy("Connecting…");try{const r=await fetch(U+".json");if(!r.ok)throw r.status;const o=await r.json();
+if(o&&o.config)apply(o);else push();live=true;if(!o||!o.config)push();
+setSy("● Syncing across devices");setInterval(poll,3000);addEventListener("focus",poll)}catch(e){setSy(e===401||e===403?"Permission denied: check the database rules, and that the address ends with /hp/ and your class code.":e===404?"Address not found: check the database URL.":"Can’t reach the sync database. Check the address and internet, a school filter, and that this page isn’t open inside Claude.")}}
+async function poll(){if(!live||document.hidden)return;const q=wseq;try{const r=await fetch(U+".json");if(!r.ok)throw 0;const o=await r.json();
+if(q!==wseq||pend)return;if(o&&o.config)apply(o);setSy("● Syncing across devices")}catch(e){setSy("Offline. Changes stay on this device until it reconnects.")}}
+function setUrl(){const v=$("#sy-url").value.trim();try{v?localStorage.setItem("hpdb",v):localStorage.removeItem("hpdb")}catch(e){}location.reload()}
+function cpLink(){const l=location.href.split(/[?#]/)[0]+"?sync="+encodeURIComponent(U);
+modal("Link for other devices","Open this link on any device to connect it:<br><input readonly style=\"width:100%\" value=\""+esc(l)+"\" onfocus=\"this.select()\">",[["OK"]]);
+try{navigator.clipboard.writeText(l).catch(()=>{})}catch(e){}}
+setTimeout(connect,0);
+let R={from:null,to:null,per:"all",kind:"log",c:{student:1,period:1,type:1,date:1,out:1,back:1,dur:1,exc:1}};
+const CL={student:"Student",period:"Period",type:"Pass type",date:"Date",out:"Time out",back:"Time back",dur:"Minutes out",exc:"Exception"};
+function rows(){R.from=R.from||S.p.start;R.to=R.to||S.p.end;
+const pn=s=>(perOf(s)||{name:""}).name,inP=s=>R.per==="all"||(perOf(s)||{}).id===R.per;
+const ps=S.passes.filter(p=>{const k=ymd(new Date(p.out));return k>=R.from&&k<=R.to&&inP(p.student)}).sort((a,b)=>a.out-b.out);
+if(R.kind==="sum"){const h=[];if(R.c.student)h.push("Student");if(R.c.period)h.push("Period");
+if(R.c.type)S.types.forEach(t=>h.push(t.name));h.push("Total");if(R.c.exc)h.push("Exceptions");
+return{h,r:S.students.filter(inP).map(s=>{const my=ps.filter(p=>p.student===s),r=[];if(R.c.student)r.push(s);if(R.c.period)r.push(pn(s));
+if(R.c.type)S.types.forEach(t=>r.push(my.filter(p=>p.type===t.name).length));r.push(my.length);if(R.c.exc)r.push(my.filter(p=>p.exc).length);return r})}}
+const ks=Object.keys(CL).filter(k=>R.c[k]);
+return{h:ks.map(k=>CL[k]),r:ps.map(p=>{const v={student:p.student,period:pn(p.student),type:p.type,date:ymd(new Date(p.out)),out:ft(p.out),back:p.back?ft(p.back):"Still out",dur:p.back?Math.round((p.backR&&p.outR?p.backR-p.outR:p.back-p.out)/6e4):"",exc:p.exc?"Yes":""};return ks.map(k=>v[k])})}}
+function rep(){const d=rows();
+return`<div class="card"><h2>Report</h2>
+<div class="row">From <input type="date" value="${R.from}" onchange="R.from=this.value;render()"> to <input type="date" value="${R.to}" onchange="R.to=this.value;render()"></div>
+<div class="row"><select onchange="R.per=this.value;render()"><option value="all">All periods</option>${S.periods.map(p=>`<option value="${p.id}" ${R.per===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select>
+<select onchange="R.kind=this.value;render()"><option value="log" ${R.kind==="log"?"selected":""}>Detailed log</option><option value="sum" ${R.kind==="sum"?"selected":""}>Summary by student</option></select></div>
+<div class="row"><b>Include:</b>${Object.keys(CL).map(k=>`<label><input type="checkbox" ${R.c[k]?"checked":""} onchange="R.c['${k}']=this.checked?1:0;render()"> ${CL[k]}</label>`).join(" ")}</div>
+<div class="mu">In a summary, “Pass type” adds a count column per type.</div>
+<div class="row"><button class="p" onclick="exp('x')">Export spreadsheet</button><button class="p" onclick="exp('p')">Export PDF</button></div></div>
+<div class="card tw"><table><tr>${d.h.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${d.r.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")||`<tr><td class="mu">No passes in this range.</td></tr>`}</table></div>`}
+async function exp(k){const d=rows(),base="hall-pass-report-"+R.from+"-to-"+R.to;let name,data;
+try{if(k==="x"){if(window.XLSX){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([d.h,...d.r]),"Report");data=new Uint8Array(XLSX.write(wb,{bookType:"xlsx",type:"array"}));name=base+".xlsx"}
+else{data=[d.h,...d.r].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\n");name=base+".csv"}}
+else{const doc=new jspdf.jsPDF({orientation:d.h.length>5?"l":"p"});doc.setFontSize(14);doc.text("Hall Pass Report",14,14);doc.setFontSize(10);
+doc.text(R.from+" to "+R.to+(R.per==="all"?"":" · "+S.periods.find(p=>p.id===R.per).name),14,20);
+doc.autoTable({head:[d.h],body:d.r.map(r=>r.map(String)),startY:25,styles:{fontSize:9}});data=doc.output("arraybuffer");name=base+".pdf"}
+
+
+const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}catch(e){modal("Export failed","The file couldn’t be created or saved"+(e&&e.message?": "+esc(e.message):"."),[["OK"]],1)}}
+function toList(rows,pdf){let nc=0,pc=-1,fc=-1,lc=-1,st=0;
+if(!pdf)for(let i=0;i<Math.min(5,rows.length);i++){const r=rows[i].map(c=>String(c).toLowerCase());
+const fi=r.findIndex(c=>/first/.test(c)),li=r.findIndex(c=>/last|surname/.test(c)),ni=r.findIndex(c=>/name|student/.test(c));
+if(fi>-1||li>-1||ni>-1){fc=fi;lc=li;nc=ni;pc=r.findIndex(c=>/period|class|section|hour/.test(c));st=i+1;break}}
+const out=[];rows.slice(st).forEach(r=>{let n,p="";
+if(fc>-1||lc>-1)n=[fc>-1?r[fc]:"",lc>-1?r[lc]:""].map(x=>String(x||"").trim()).filter(Boolean).join(" ");else n=String(r[Math.max(nc,0)]||"").trim();
+if(pc>-1)p=String(r[pc]||"").trim();
+const m=pdf&&n.match(/^(.+?)[\s,;|]+(?:period\s*|p)?(\d{1,2})$/i);if(m){n=m[1];p=m[2]}
+if(n&&n.length<60&&!/^\d+$/.test(n)&&!/^(name|student|roster|page|period)\b/i.test(n))out.push({n,p})});return out}
+async function upl(inp){const f=inp.files[0];inp.value="";if(!f)return;let list=[];
+try{const buf=await f.arrayBuffer();
+if(/\.pdf$/i.test(f.name)){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const pdf=await pdfjsLib.getDocument({data:buf}).promise,lines=[];
+for(let i=1;i<=pdf.numPages;i++){const tc=await(await pdf.getPage(i)).getTextContent(),g={};
+tc.items.forEach(t=>{const y=Math.round(t.transform[5]/3);(g[y]=g[y]||[]).push(t)});
+Object.keys(g).map(Number).sort((a,b)=>b-a).forEach(y=>lines.push(g[y].sort((a,b)=>a.transform[4]-b.transform[4]).map(t=>t.str).join(" ").replace(/\s+/g," ").trim()))}
+list=toList(lines.map(l=>[l]),1)}
+else{const wb=XLSX.read(buf,{type:"array"});list=toList(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""}))}
+}catch(e){return modal("Couldn’t read that file","Try a spreadsheet (.xlsx or .csv), or a PDF with selectable text rather than a scan.",[["OK"]],1)}
+if(!list.length)return modal("No students found","No names were found in that file.",[["OK"]],1);
+modal("Import "+list.length+" students?",esc(list.slice(0,6).map(x=>x.n).join(", "))+(list.length>6?"…":""),[["Cancel"],["Add to roster",()=>imp(list,0)],["Replace roster",()=>imp(list,1),1]])}
+function imp(list,rp){if(rp){S.students=[];S.sp={}}
+list.forEach(x=>{if(S.students.includes(x.n))return;S.students.push(x.n);
+if(x.p){const v=x.p.toLowerCase(),dv=v.replace(/\D/g,"");let pr=S.periods.find(p=>p.name.toLowerCase()===v||(dv!==""&&p.name.replace(/\D/g,"")===dv));
+if(!pr){pr={id:"p"+Date.now()+S.periods.length,name:x.p.length<=2?"Period "+x.p:x.p,start:"10:00",end:"10:50"};S.periods.push(pr)}S.sp[x.n]=pr.id}});
+save();render()}
+function tab(v){view=v;render()}
+function modal(title,body,btns,bad){$("#mb").className="box"+(bad?" bad":"");
+$("#mb").innerHTML=`<h2>${title}</h2><p>${body}</p><div class="row" style="justify-content:flex-end" id="mbtn"></div>`;
+btns.forEach(b=>{const e=document.createElement("button");e.textContent=b[0];if(b[2])e.className="p";e.onclick=()=>{$("#modal").style.display="none";b[1]&&b[1]()};$("#mbtn").appendChild(e)});
+$("#modal").style.display="flex"}
+function issue(st,ty,exc){S.passes.push({id:Date.now()+Math.random(),student:st,type:ty,out:now().getTime(),outR:Date.now(),back:null,exc:!!exc});save();render()}
+function ask(st,ty,kind){S.reqs.push({id:Date.now()+Math.random(),student:st,type:ty,kind});save();render();
+modal("Request sent","Your teacher has been notified. Wait for approval before leaving.",[["OK"]])}
+function request(st,ty){const d=now(),k=ymd(d);
+if(active(st))return modal("Already out","You already have a pass out. Return it first.",[["OK"]],1);
+if(k<S.p.start||k>S.p.end)return modal("Outside the grading period","Passes can only be used between "+S.p.start+" and "+S.p.end+".",[["OK"]],1);
+const m=mins(d),per=perOf(st);
+if(!per||!(tm(per.start)<=m&&m<tm(per.end)))return modal("Class not in session",`Passes can only be used during ${per?esc(per.name)+" ("+fm(tm(per.start))+" – "+fm(tm(per.end))+")":"your class period"}.`,[["OK"]],1);
+if(S.q.some(x=>x.student===st))return modal("Already in line","You’re already in line. Wait for your turn.",[["OK"]],1);
+const a=m-tm(per.start),b=tm(per.end)-m;
+if(a<S.bs||b<S.be){const why=a<S.bs?`the first ${S.bs} minutes`:`the last ${S.be} minutes`;
+return modal("Passes are closed right now",`No passes are allowed during ${why} of class. Open window: ${fm(tm(per.start)+S.bs)} – ${fm(tm(per.end)-S.be)}.`,[["Cancel"],["Ask teacher",()=>ask(st,ty,"Blackout override"),1]],1)}
+const u=used(st,ty),l=lim(ty);
+if(u>=l)return modal("⚠ You’re about to exceed your limit",`You have used ${u} of ${l} ${esc(ty)} passes this 9 weeks. Another one needs your teacher’s approval.`,[["Cancel"],["Request exception",()=>ask(st,ty,"Over limit"),1]],1);
+if(u+1===l)return modal("⚠ Last pass warning",`This is your last ${esc(ty)} pass for this 9 weeks (${u+1} of ${l}). Any more will need teacher approval.`,[["Cancel"],["Use my last pass",()=>go(st,ty),1]]);
+go(st,ty)}
+function back(id){const p=S.passes.find(x=>x.id===id);p.back=now().getTime();p.backR=Date.now();save();render()}
+function approve(id){const r=S.reqs.find(x=>x.id===id);S.reqs=S.reqs.filter(x=>x!==r);
+if(active(r.student))S.reqs.push(r);else issue(r.student,r.type,true);save();render()}
+function deny(id){S.reqs=S.reqs.filter(x=>x.id!==id);save();render()}
+function set(path,v,num){const k=path.split(".");let o=S;for(let i=0;i<k.length-1;i++)o=o[k[i]];o[k.at(-1)]=num?+v:v;save();render()}
+const flip=()=>{S.sim.on=!S.sim.on;save();render()};
+const add=(w)=>{if(w==="t")S.types.push({name:"New pass",limit:2});if(w==="p")S.periods.push({id:"p"+Date.now(),name:"Period "+(S.periods.length+1),start:"10:00",end:"10:50"});
+if(w==="s"){const v=$("#ns").value.trim();if(v)S.students.push(v)}save();render()};
+const rm=(w,i)=>{S[w].splice(i,1);save();render()};
+function weekNo(){const d=ymd(now());const w=Math.floor((new Date(d)-new Date(S.p.start))/6048e5)+1;return d<S.p.start?"not started":d>S.p.end?"ended":"week "+w+" of 9"}
+function render(){if(!T&&view!=="s")view="s";$("#t-s").className=view==="s"?"on":"";$("#t-t").hidden=$("#t-r").hidden=!T;$("#t-l").textContent=T?"Lock":"🔒 Teacher login";$("#t-t").className=view==="t"?"on":"";$("#t-r").className=view==="r"?"on":"";
+const d=now(),m=mins(d),per=perAt(m);let stat="";
+if(per){const a=m-tm(per.start),b=tm(per.end)-m,cl=a<S.bs||b<S.be;
+stat=cl?`<div class="st no">${per.name} · ${fm(m)} · Passes closed (open ${fm(tm(per.start)+S.bs)} – ${fm(tm(per.end)-S.be)})</div>`:`<div class="st ok">${per.name} · ${fm(m)} · Passes open until ${fm(tm(per.end)-S.be)}</div>`}
+else stat=`<div class="st no">${fm(m)} · No class period in session</div>`;
+$("#app").innerHTML=(S.sim.on&&T?`<div class="mu" style="margin-bottom:6px">Test clock is on (${esc(S.sim.t.replace("T"," "))}). Change it in Teacher › Settings.</div>`:"")+stat+(view==="s"?stu():view==="r"?rep():tea());tick()}
+function stu(){const cp=perAt(mins(now())),ro=cp?S.students.filter(s=>(perOf(s)||{}).id===cp.id):[];if(!ro.includes(me))me="";
+const ap=me?active(me):null;
+return`<div class="card"><div class="row"><b>${cp?esc(cp.name)+" · tap your name":"No class period in session"}</b></div><div class="grid">${ro.map(s=>`<button class="pb ${s===me?"on":""}" data-s="${esc(s)}" onclick="me=this.dataset.s;render()"><b>${esc(s)}</b>${active(s)?`<span>Out now</span>`:""}</button>`).join("")||`<span class="mu">No students are assigned to this period.</span>`}</div>
+${ap?`<div class="st no" style="margin:10px 0">Out on a ${esc(ap.type)} pass since ${ft(ap.out)}${ap.outR?` · <b class="tm" data-t="${ap.outR}"></b>`:""}. <button class="p" onclick="back(${ap.id})">I’m back</button></div>`:""}
+<div class="grid" style="margin-top:12px">${me?S.types.map(t=>{const u=used(me,t.name),c=u>=t.limit?"full":u+1===t.limit?"last":"";
+return`<button class="pb ${c}" onclick="request(me,${JSON.stringify(t.name).replace(/"/g,"&quot;")})"><b>${esc(t.name)}</b><span>${u} of ${t.limit} used</span></button>`}).join(""):`<span class="mu">Select your name to choose a pass.</span>`}</div>${qv()}
+<p class="mu">Limits reset each 9 weeks (${S.p.start} to ${S.p.end}).</p></div>`}
+function tea(){const ts=S.types;
+return`<div class="card"><h2>Approval requests (${S.reqs.length})</h2>${S.reqs.length?S.reqs.map(r=>`<div class="row"><span><b>${esc(r.student)}</b> · ${esc(r.type)} · <span class="mu">${r.kind}</span></span><button class="p" onclick="approve(${r.id})">Approve</button><button class="d" onclick="deny(${r.id})">Deny</button></div>`).join(""):`<span class="mu">No pending requests.</span>`}</div>
+${qt()}<div class="card"><h2>Out now</h2>${S.passes.filter(p=>!p.back).map(p=>`<div class="row"><span><b>${esc(p.student)}</b> · ${esc(p.type)} · since ${ft(p.out)}${p.outR?` · <b class="tm" data-t="${p.outR}"></b>`:""}${p.exc?" (exception)":""}</span><button onclick="back(${p.id})">Mark returned</button></div>`).join("")||`<span class="mu">Nobody is out.</span>`}</div>
+<div class="card"><h2>Usage this 9 weeks (${weekNo()})</h2><div class="tw"><table><tr><th>Student</th><th>Period</th>${ts.map(t=>`<th>${esc(t.name)} /${t.limit}</th>`).join("")}</tr>
+${S.students.map(s=>`<tr><td>${esc(s)}</td><td>${esc((perOf(s)||{name:""}).name)}</td>${ts.map(t=>{const u=used(s,t.name);return`<td class="${u>t.limit?"over":""}">${u}</td>`}).join("")}</tr>`).join("")}</table></div></div>
+<div class="card"><h2>Settings</h2>
+<div class="row"><b>9 weeks:</b> start <input type="date" value="${S.p.start}" onchange="set('p.start',this.value)"> end <input type="date" value="${S.p.end}" onchange="set('p.end',this.value)"></div>
+<div class="row"><b>No passes during first</b><input type="number" min="0" value="${S.bs}" onchange="set('bs',this.value,1)"> <b>and last</b><input type="number" min="0" value="${S.be}" onchange="set('be',this.value,1)"> <b>minutes of class</b></div><div class="row"><b>Students allowed out at once (per class period):</b><input type="number" min="1" value="${S.maxOut}" onchange="set('maxOut',this.value,1)"></div>
+<h2 style="margin-top:14px">Pass limits per 9 weeks</h2>${ts.map((t,i)=>`<div class="row"><input value="${esc(t.name)}" onchange="set('types.${i}.name',this.value)"><input type="number" min="0" value="${t.limit}" onchange="set('types.${i}.limit',this.value,1)"><button class="d" onclick="rm('types',${i})">Remove</button></div>`).join("")}<button onclick="add('t')">+ Pass type</button>
+<h2 style="margin-top:14px">Class periods</h2>${S.periods.map((p,i)=>`<div class="row"><input value="${esc(p.name)}" onchange="set('periods.${i}.name',this.value)"><input type="time" value="${p.start}" onchange="set('periods.${i}.start',this.value)"> to <input type="time" value="${p.end}" onchange="set('periods.${i}.end',this.value)"><button class="d" onclick="rm('periods',${i})">Remove</button></div>`).join("")}<button onclick="add('p')">+ Period</button>
+<h2 style="margin-top:14px">Roster</h2>${S.students.map((s,i)=>`<div class="row"><span style="min-width:130px">${esc(s)}</span><select onchange="S.sp[S.students[${i}]]=this.value;save();render()">${S.periods.map(p=>`<option value="${p.id}" ${p.id===(perOf(s)||{}).id?"selected":""}>${esc(p.name)}</option>`).join("")}</select><button class="d" onclick="rm('students',${i})">×</button></div>`).join("")}<div class="row"><input id="ns" placeholder="Add student"><button onclick="add('s')">Add</button></div><div class="row"><b>Upload roster:</b><input type="file" accept=".xlsx,.xls,.csv,.pdf" onchange="upl(this)"></div><div class="mu">Spreadsheet: a Name (or First/Last) column and an optional Period column. PDF: one student per line, optionally ending with a period number.</div>
+<h2 style="margin-top:14px">Sync across devices</h2><div class="row"><input id="sy-url" style="flex:1;min-width:240px" placeholder="Sync address (see setup steps)" value="${esc(U)}"><button onclick="setUrl()">Save</button><button onclick="cpLink()">Link for other devices</button></div><div class="mu">Every device needs the same sync address. “Link for other devices” gives a link that sets it automatically.</div><h2 style="margin-top:14px">Test clock</h2><div class="row"><button onclick="flip()">${S.sim.on?"Switch to real time":"Use test time"}</button><input type="datetime-local" value="${S.sim.t}" onchange="set('sim.t',this.value)"></div>
+<button style="margin-top:10px" onclick="setPin()">Change teacher PIN</button> <button class="d" style="margin-top:10px" onclick="if(confirm('Reset everything?')){S=def();save();render()}">Reset all data</button></div>`}
+render();
+</script></body></html>
