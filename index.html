@@ -15,6 +15,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
 body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}input,textarea,select{-webkit-user-select:text;user-select:text}
+body.admin nav button[data-v=v1],body.admin nav button[data-v=v2],body.admin nav button[data-v=v3],body.admin nav button[data-v=v4],body.admin #pbar,body.admin #banner,body.admin #lockBtn{display:none}
+body:not(.admin) .aonly{display:none}
 body{background:var(--bg);color:var(--ink);font:18px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 header{display:flex;align-items:center;gap:16px;padding:14px 20px;flex-wrap:wrap}
@@ -76,7 +78,7 @@ textarea{width:100%;min-height:220px;font:inherit;padding:12px;border-radius:12p
 <body>
 <header>
   <h1>🚪 Hall Pass <small id="sync" style="font-size:14px;font-weight:500;color:var(--mut)"></small></h1>
-  <nav id="nav"><button class="on" data-v="v1">Sign Out</button><button class="tonly" data-v="v2">Log</button><button class="tonly" data-v="v3">Settings</button><button class="tonly" data-v="v4">Passes</button></nav><button class="btn g" id="lockBtn"></button>
+  <nav id="nav"><button class="on" data-v="v1">Sign Out</button><button class="tonly" data-v="v2">Log</button><button class="tonly" data-v="v3">Settings</button><button class="tonly" data-v="v4">Passes</button><button class="tonly" id="navOut" data-v="v5">Out of class</button><button class="aonly" data-v="v6">Teachers</button></nav><button class="btn g" id="lockBtn"></button>
 </header>
 <div id="pbar"></div>
 <div id="banner" class="banner"></div>
@@ -115,6 +117,7 @@ textarea{width:100%;min-height:220px;font:inherit;padding:12px;border-radius:12p
         <button id="newQ" hidden></button>
         <label class="set">Auto-lock teacher portal after <input type="number" id="lockMin" min="1" max="60"> minutes idle</label>
         <div class="row"><button class="btn g" id="chgPw">Change teacher passcode</button></div>
+        <div id="acctBox"></div>
       </div></div>
     </div>
   </section>
@@ -122,6 +125,24 @@ textarea{width:100%;min-height:220px;font:inherit;padding:12px;border-radius:12p
     <h2 id="passTitle">Passes</h2>
     <p id="passNote" style="color:var(--mut);margin-top:0"></p>
     <div class="panel wrap"><table><thead id="passHead"></thead><tbody id="passBody"></tbody></table><div class="empty" id="passEmpty">Add students on the Roster tab.</div></div>
+  </section>
+<section class="view" id="v5">
+    <h2>Out of class right now</h2>
+    <p id="schoolNote" style="color:var(--mut);margin-top:0"></p>
+    <div class="panel wrap"><table><thead><tr><th>Student</th><th>Teacher</th><th>Where</th><th>Left</th><th>Time out</th></tr></thead><tbody id="schoolBody"></tbody></table><div class="empty" id="schoolEmpty">No students are out of class.</div></div>
+  </section>
+  <section class="view" id="v6">
+    <div class="split">
+      <div><h2>Teachers</h2><div class="panel wrap"><table><thead><tr><th>Name</th><th>Email</th><th></th></tr></thead><tbody id="teachBody"></tbody></table><div class="empty" id="teachEmpty">No teachers added yet.</div></div></div>
+      <div><h2>Add a teacher</h2><div class="panel">
+        <input class="fi" id="tName" placeholder="Name" style="width:100%;margin-bottom:10px">
+        <input class="fi" id="tEmail" type="email" placeholder="Email" style="width:100%;margin-bottom:10px">
+        <input class="fi" id="tPw" type="text" placeholder="Temporary password (6+ characters)" style="width:100%;margin-bottom:10px">
+        <div class="row" style="margin-top:0"><button class="btn" id="addTeacher">Add teacher</button></div>
+        <p style="color:var(--mut)">Give the teacher this email and temporary password. They can change it from Settings with “Email me a password reset”.</p>
+        <div class="row"><button class="btn g" id="admOut">Sign out</button></div>
+      </div></div>
+    </div>
   </section>
 </main>
 <div class="modal" id="modal"><div class="sheet">
@@ -135,7 +156,8 @@ textarea{width:100%;min-height:220px;font:inherit;padding:12px;border-radius:12p
 <script>
 const hpCfg=()=>(typeof FIREBASE_CONFIG!=='undefined'&&FIREBASE_CONFIG)||{};
 const hpConfigured=()=>!!(hpCfg().apiKey&&hpCfg().projectId);
-let hpDbP=null,hpLive=false;
+let hpDbP=null,hpLive=false,hpFb=null;
+const hpEsc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* Wraps Firebase Firestore in the small interface the app uses. */
 function hpMakeDb(fs,db){
@@ -160,42 +182,112 @@ function hpMakeDb(fs,db){
   };
 }
 
-/* Sign-in box shown once per device. Resolves {email,pw} or null if skipped. */
-function hpOverlay(msg){
+/* Full-screen sign-in / setup box. Resolves {act,...fields}. */
+function hpOverlay(mode,msg,school){
   return new Promise(res=>{
     const d=document.createElement('div');
-    d.style.cssText='position:fixed;inset:0;background:rgba(10,14,25,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px';
-    const f='width:100%;font:inherit;font-size:20px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-bottom:10px;box-sizing:border-box';
+    d.style.cssText='position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;overflow:auto';
+    const f='width:100%;font:inherit;font-size:20px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);margin-bottom:10px;box-sizing:border-box';
     const b='font:inherit;font-weight:700;padding:14px 22px;border-radius:12px;border:0;cursor:pointer';
-    d.innerHTML='<div style="background:var(--card);color:var(--ink);border-radius:24px;padding:24px;max-width:420px;width:100%;font:18px system-ui,sans-serif"><h3 style="margin:0 0 6px;font-size:24px">Connect this device</h3><p style="color:var(--mut);margin:0 0 14px">Sign in with the teacher sync account so this device shares data with your others.</p><input id="hpE" type="email" placeholder="Email" autocomplete="username" style="'+f+'"><input id="hpP" type="password" placeholder="Password" autocomplete="current-password" style="'+f+'"><p id="hpM" style="color:var(--bad);min-height:1.4em;margin:0 0 8px;font-weight:600"></p><div style="display:flex;gap:10px;flex-wrap:wrap"><button id="hpGo" style="'+b+';background:var(--pri);color:var(--pi)">Connect</button><button id="hpSkip" style="'+b+';background:var(--bg);color:var(--ink);border:1px solid var(--line)">Use without syncing</button></div></div>';
+    const inp=(id,ph,type,ac)=>'<input id="'+id+'" type="'+type+'" placeholder="'+ph+'" autocomplete="'+ac+'" style="'+f+'">';
+    const m='<p id="hpM" style="color:var(--bad);min-height:1.4em;margin:0 0 8px;font-weight:600">'+hpEsc(msg||'')+'</p>';
+    const p='<p style="color:var(--mut);margin:0 0 14px">';
+    let body;
+    if(mode==='setup')body='<h3 style="margin:0 0 6px;font-size:26px">Set up your school</h3>'+p+'This creates the principal (admin) account. Do this first; the admin then adds the teachers.</p>'+inp('hpS','School name','text','organization')+inp('hpN','Your name','text','name')+inp('hpE','Email','email','username')+inp('hpP','Password (6+ characters)','password','new-password')+m+'<button id="hpGo" style="'+b+';background:var(--pri);color:var(--pi)">Create school</button>';
+    else if(mode==='login')body='<h3 style="margin:0 0 6px;font-size:26px">'+hpEsc(school&&school.name||'Hall Pass')+'</h3>'+p+'Sign in with your school account.</p>'+inp('hpE','Email','email','username')+inp('hpP','Password','password','current-password')+m+'<div style="display:flex;gap:10px;flex-wrap:wrap"><button id="hpGo" style="'+b+';background:var(--pri);color:var(--pi)">Sign in</button><button id="hpForgot" style="'+b+';background:var(--card);color:var(--ink);border:1px solid var(--line)">Forgot password?</button></div>';
+    else if(mode==='noaccess')body='<h3 style="margin:0 0 6px;font-size:26px">No access yet</h3>'+p+'This account hasn\u2019t been added to the school. Ask your administrator to add you.</p><button id="hpOut" style="'+b+';background:var(--pri);color:var(--pi)">Sign out</button>';
+    else body='<h3 style="margin:0 0 6px;font-size:26px">Can\u2019t connect</h3>'+p+hpEsc(msg||'Check the Wi-Fi and try again.')+'</p><button id="hpOut" style="'+b+';background:var(--pri);color:var(--pi)">Try again</button>';
+    d.innerHTML='<div style="background:var(--card);color:var(--ink);border-radius:24px;padding:26px;max-width:440px;width:100%;font:18px system-ui,sans-serif;border:1px solid var(--line)">'+body+'</div>';
     document.body.appendChild(d);
-    const $$=id=>d.querySelector('#'+id);
-    $$('hpM').textContent=msg||'';
-    const done=v=>{d.remove();res(v)};
-    $$('hpGo').onclick=()=>done({email:$$('hpE').value.trim(),pw:$$('hpP').value});
-    $$('hpSkip').onclick=()=>done(null);
-    $$('hpP').onkeydown=e=>{if(e.key==='Enter')$$('hpGo').click()};
+    const q=id=>d.querySelector('#'+id),v=id=>q(id)?q(id).value.trim():'';
+    const done=o=>{d.remove();res(o)};
+    if(q('hpGo'))q('hpGo').onclick=()=>done({act:mode,school:v('hpS'),name:v('hpN'),email:v('hpE'),pw:q('hpP')?q('hpP').value:''});
+    if(q('hpForgot'))q('hpForgot').onclick=()=>done({act:'forgot',email:v('hpE')});
+    if(q('hpOut'))q('hpOut').onclick=()=>done({act:'out'});
+    if(q('hpP'))q('hpP').onkeydown=e=>{if(e.key==='Enter')q('hpGo').click()};
   });
 }
+
+function hpErr(e){
+  const c=(e&&e.code)||'';
+  return /invalid-credential|wrong-password|user-not-found/.test(c)?'Wrong email or password.'
+   :/email-already/.test(c)?'That email already has an account.'
+   :/weak-password/.test(c)?'Use at least 6 characters.'
+   :/invalid-email/.test(c)?'That email doesn\u2019t look right.'
+   :/network/.test(c)?'No connection. Try again.'
+   :/too-many/.test(c)?'Too many tries. Wait a minute and try again.'
+   :/permission/.test(c)?'That isn\u2019t allowed for this account.'
+   :'Something went wrong. Try again.';
+}
+const hpApi={
+  err:hpErr,
+  async createTeacher({name,email,pw}){
+    const {app,fs,au,dbRaw}=hpFb;
+    const a2=app.initializeApp(hpCfg(),'sec'+Date.now()),au2=au.getAuth(a2);
+    try{
+      const c=await au.createUserWithEmailAndPassword(au2,email,pw);
+      await fs.setDoc(fs.doc(dbRaw,'users/'+c.user.uid),{name,email,role:'teacher',created:Date.now()});
+      await au.signOut(au2);
+    }finally{await app.deleteApp(a2)}
+  },
+  resetPassword:email=>hpFb.au.sendPasswordResetEmail(hpFb.auth,email),
+  async signOut(){
+    try{await hpFb.au.signOut(hpFb.auth)}catch(e){}
+    try{localStorage.removeItem('hallpass-v1');localStorage.removeItem('hp-uid')}catch(e){}
+    location.reload();
+  }
+};
 
 async function hpConnect(){
   const B='https://www.gstatic.com/firebasejs/10.12.2/';
   const [app,fs,au]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-firestore.js'),import(B+'firebase-auth.js')]);
   const a=app.initializeApp(hpCfg()),auth=au.getAuth(a);
+  let dbRaw;
+  try{dbRaw=fs.initializeFirestore(a,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})})}
+  catch(e){dbRaw=fs.getFirestore(a)}
+  hpFb={app,fs,au,auth,a,dbRaw};
   let user=await new Promise(r=>{const un=au.onAuthStateChanged(auth,x=>{un();r(x)})});
-  let msg='';
-  while(!user){
-    const r=await hpOverlay(msg);
-    if(!r)return null;
-    try{user=(await au.signInWithEmailAndPassword(auth,r.email,r.pw)).user}
-    catch(e){msg='Sign-in failed. Check the email and password.'}
+  let school=null;
+  if(!user){
+    const s=await fs.getDoc(fs.doc(dbRaw,'config/school'));
+    school=s.exists()?s.data():null;
+    let msg='';
+    for(;;){
+      const r=await hpOverlay(school?'login':'setup',msg,school);msg='';
+      try{
+        if(r.act==='forgot'){
+          if(!r.email){msg='Enter your email first.';continue}
+          await au.sendPasswordResetEmail(auth,r.email);msg='Reset email sent. Check your inbox.';continue;
+        }
+        if(r.act==='setup'){
+          if(!r.school||!r.name||r.pw.length<6){msg='Fill in every box. The password needs 6+ characters.';continue}
+          const c=await au.createUserWithEmailAndPassword(auth,r.email,r.pw);user=c.user;
+          const bt=fs.writeBatch(dbRaw);
+          bt.set(fs.doc(dbRaw,'config/school'),{name:r.school,created:Date.now()});
+          bt.set(fs.doc(dbRaw,'users/'+user.uid),{name:r.name,email:r.email,role:'admin',created:Date.now()});
+          await bt.commit();school={name:r.school};
+        }else user=(await au.signInWithEmailAndPassword(auth,r.email,r.pw)).user;
+        break;
+      }catch(e){msg=hpErr(e)}
+    }
   }
-  let db;
-  try{db=fs.initializeFirestore(a,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})})}
-  catch(e){db=fs.getFirestore(a)}
+  const prof=await fs.getDoc(fs.doc(dbRaw,'users/'+user.uid));
+  if(!prof.exists()){
+    await hpOverlay('noaccess');
+    await au.signOut(auth);location.reload();
+    return new Promise(()=>{});
+  }
+  let last=null;try{last=localStorage.getItem('hp-uid')}catch(e){}
+  if(last!==user.uid){
+    try{localStorage.removeItem('hallpass-v1');localStorage.setItem('hp-uid',user.uid)}catch(e){}
+    location.reload();return new Promise(()=>{});
+  }
+  const p=prof.data();
+  window.hpCtx={uid:user.uid,name:p.name||user.email,email:user.email,role:p.role==='admin'?'admin':'teacher'};
   hpLive=true;
-  return hpMakeDb(fs,db);
+  return hpMakeDb(fs,dbRaw);
 }
+async function hpRetry(){await hpOverlay('fail','Check the Wi-Fi and try again.');location.reload();return new Promise(()=>{})}
 
 async function hpSave({filename,data}){
   const ext=filename.split('.').pop();
@@ -206,15 +298,11 @@ async function hpSave({filename,data}){
   setTimeout(()=>URL.revokeObjectURL(a.href),5000);
 }
 
-/* The app talks to window.claude.use(...); this supplies the same two features without Claude. */
 window.claude={use:async name=>{
   if(name==='downloads')return {save:hpSave};
-  if(name==='db')return hpConfigured()?(hpDbP||(hpDbP=hpConnect())):null;
+  if(name==='db')return hpConfigured()?(hpDbP||(hpDbP=hpConnect().catch(()=>hpRetry()))):null;
   return null;
 }};
-document.addEventListener('click',e=>{
-  if(e.target&&e.target.id==='sync'&&hpConfigured()&&!hpLive)hpConnect().then(d=>{if(d)location.reload()}).catch(()=>{});
-});
 </script>
 <script>
 const KEY='hallpass-v1';
@@ -873,7 +961,111 @@ if(!S.mig2){
   save();
 }
 renderRoster();all();
-$('sync').textContent=hpConfigured()?'Not syncing · tap to connect':'Saved on this device';
+$('sync').textContent=hpConfigured()?'Connecting…':'Saved on this device';
 if(window.claude&&claude.use)claude.use('db').then(initDb).catch(()=>{});
+
+/* ===== multi-teacher accounts, live school view, admin ===== */
+var LIVE=[],TEACHERS=[],adminMode=false,hpLiveRef=null,hpLiveV='';
+function pushLive(){
+  if(!hpLiveRef||!window.hpCtx)return;
+  const o={name:hpCtx.name,q:S.queue.length,out:S.out.map(x=>({n:x.name,d:x.dest,i:icon(x.dest),s:x.start,p:x.p||''}))};
+  const v=JSON.stringify(o);if(v===hpLiveV)return;hpLiveV=v;
+  hpLiveRef.set(Object.assign(JSON.parse(v),{t:Date.now()})).catch(()=>{});
+}
+function pushState(){
+  pushLive();
+  if(!stRef)return;
+  const {log,cur,...r}=S,v=JSON.stringify(r);
+  if(v===lastV)return;lastV=v;stRef.set({v}).catch(()=>{$('sync').textContent='Sync problem'});
+}
+function initDb(db){
+  const C=window.hpCtx;if(!db||!C)return;
+  DB=db;
+  db.collection('live').onSnapshot(snap=>{LIVE=snap.docs.map(d=>d.data());renderSchool()},()=>{});
+  if(C.role==='admin'){
+    adminMode=true;T=true;document.body.classList.add('admin');applyMode();
+    $('sync').textContent='\u25cf Admin \u00b7 '+C.name;
+    document.querySelector('[data-v=v5]').click();loadTeachers();return;
+  }
+  stRef=db.doc('teachers/'+C.uid);logCol=db.collection('teachers/'+C.uid+'/log');hpLiveRef=db.doc('live/'+C.uid);
+  let first=true;
+  stRef.onSnapshot(snap=>{
+    if(!snap.exists){
+      if(first){first=false;pushState();S.log.forEach(l=>logCol.add(l).catch(()=>{}))}
+      $('sync').textContent='\u25cf '+C.name;return;
+    }
+    first=false;
+    const v=snap.data().v;
+    if(v!==lastV){
+      lastV=v;
+      try{const cur=S.cur;Object.assign(S,JSON.parse(v));syncTypes();S.cur=S.periods.some(p=>p.id===cur)?cur:S.periods[0].id;renderRoster();all()}catch(e){}
+    }
+    $('sync').textContent='\u25cf '+C.name;
+  },()=>{$('sync').textContent='Offline'});
+  logCol.orderBy('start').onSnapshot(snap=>{S.log=snap.docs.map(d=>d.data());renderLog();renderPasses();renderGrid()},()=>{});
+  renderAcct();pushLive();
+}
+function autoLock(){if(T&&!adminMode&&Date.now()-lastAct>(S.lockMin||5)*60000){T=false;applyMode();toast('Teacher portal locked (idle).')}}
+
+function renderSchool(){
+  const rows=[];
+  LIVE.forEach(l=>(l.out||[]).forEach(o=>rows.push(Object.assign({t:l.name||''},o))));
+  rows.sort((a,b)=>a.s-b.s);
+  const nav=$('navOut');if(nav)nav.textContent='Out of class'+(rows.length?' ('+rows.length+')':'');
+  const w=(S.warn||5)*60000,n=Date.now();
+  $('schoolBody').innerHTML=rows.map(r=>{
+    const e=n-r.s,c=e>2*w?'var(--bad)':e>w?'var(--warn)':'inherit';
+    return `<tr><td><b>${esc(r.n)}</b></td><td>${esc(r.t)}${r.p?' \u00b7 '+esc(r.p):''}</td><td>${esc(r.i||icon(r.d))} ${esc(r.d)}</td><td>${clock(r.s)}</td><td style="font-weight:700;font-variant-numeric:tabular-nums;color:${c}">${mmss(e)}</td></tr>`;
+  }).join('');
+  $('schoolEmpty').style.display=rows.length?'none':'block';
+  const rooms=LIVE.filter(l=>(l.out||[]).length).length;
+  $('schoolNote').textContent=rows.length+' student'+(rows.length===1?'':'s')+' out of class'+(rows.length?' from '+rooms+' classroom'+(rooms===1?'':'s'):'')+'.';
+}
+setInterval(()=>{if($('v5').classList.contains('on'))renderSchool()},1000);
+
+function renderAcct(){
+  const C=window.hpCtx,el=$('acctBox');if(!C){el.innerHTML='';return}
+  el.innerHTML=`<p style="margin:14px 0 6px;color:var(--mut)">Signed in as <b style="color:var(--ink)">${esc(C.name)}</b> (${esc(C.email)})</p><div class="row" style="margin-top:0"><button class="btn g" id="acctOut">Sign out of this device</button><button class="btn g" id="acctReset">Email me a password reset</button></div>`;
+}
+$('acctBox').onclick=async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.id==='acctOut')hpApi.signOut();
+  if(b.id==='acctReset'){try{await hpApi.resetPassword(hpCtx.email);toast('Password reset email sent.')}catch(x){toast(hpApi.err(x))}}
+};
+
+async function loadTeachers(){
+  if(!DB)return;
+  try{
+    const s=await DB.collection('users').get();
+    TEACHERS=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(u=>u.role==='teacher').sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  }catch(e){toast('Couldn\u2019t load the teacher list.');return}
+  renderTeachers();
+}
+function renderTeachers(){
+  $('teachBody').innerHTML=TEACHERS.map(t=>`<tr><td><b>${esc(t.name)}</b></td><td>${esc(t.email)}</td><td style="white-space:nowrap"><button class="mini" data-a="reset" data-e="${esc(t.email)}">Send reset email</button> <button class="mini" data-a="rm" data-u="${esc(t.id)}">Remove</button></td></tr>`).join('');
+  $('teachEmpty').style.display=TEACHERS.length?'none':'block';
+}
+let armU=null;
+$('teachBody').onclick=async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.a==='reset'){try{await hpApi.resetPassword(b.dataset.e);toast('Reset email sent.')}catch(x){toast(hpApi.err(x))}return}
+  if(b.dataset.a==='rm'){
+    const u=b.dataset.u;
+    if(armU!==u){armU=u;b.textContent='Tap again';setTimeout(()=>{armU=null;renderTeachers()},3000);return}
+    armU=null;
+    try{await DB.doc('users/'+u).delete();try{await DB.doc('live/'+u).delete()}catch(x){}toast('Access removed.');loadTeachers()}
+    catch(x){toast('Couldn\u2019t remove that teacher.')}
+  }
+};
+$('addTeacher').onclick=async()=>{
+  const name=$('tName').value.trim(),email=$('tEmail').value.trim(),pw=$('tPw').value;
+  if(!name||!/^\S+@\S+\.\S+$/.test(email)||pw.length<6){toast('Enter a name, a valid email and a password of 6+ characters.');return}
+  const btn=$('addTeacher');btn.disabled=true;
+  try{await hpApi.createTeacher({name,email,pw});$('tName').value='';$('tEmail').value='';$('tPw').value='';toast(name+' was added.');loadTeachers()}
+  catch(e){toast(hpApi.err(e))}
+  finally{btn.disabled=false}
+};
+$('admOut').onclick=()=>hpApi.signOut();
+renderSchool();
 </script>
 </body></html>
